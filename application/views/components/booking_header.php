@@ -17,7 +17,7 @@
 
         <div class="d-flex justify-content-center justify-content-md-start">
             <span class="display-booking-selection small fw-normal text-white-50">
-                <?= lang('service') ?> │ <?= lang('provider') ?>
+                Beauty, nails &amp; more
             </span>
         </div>
     </div>

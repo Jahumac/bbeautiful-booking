@@ -326,6 +326,7 @@ class Calendar extends EA_Controller
                     $appointment['id_users_customer'] = $customer['id'] ?? $customer_data['id'];
                 }
 
+
                 // Check if the provider has a conflicting appointment at the selected time
                 $exclude_appointment_id = !empty($appointment['id']) ? (int) $appointment['id'] : null;
 
@@ -674,9 +675,6 @@ class Calendar extends EA_Controller
                 $appointment['provider'] = $this->providers_model->find($appointment['id_users_provider']);
                 $appointment['service'] = $this->services_model->find($appointment['id_services']);
                 $appointment['customer'] = $this->customers_model->find($appointment['id_users_customer']);
-
-                // Multi-service (stacked) booking: load all linked services.
-                $appointment['services'] = $this->appointments_model->get_services($appointment['id']);
             }
 
             unset($appointment);
@@ -832,9 +830,6 @@ class Calendar extends EA_Controller
                 $appointment['provider'] = $this->providers_model->find($appointment['id_users_provider']);
                 $appointment['service'] = $this->services_model->find($appointment['id_services']);
                 $appointment['customer'] = $this->customers_model->find($appointment['id_users_customer']);
-
-                // Multi-service (stacked) booking: load all linked services.
-                $appointment['services'] = $this->appointments_model->get_services($appointment['id']);
             }
 
             unset($appointment);

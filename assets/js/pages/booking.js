@@ -701,13 +701,13 @@ App.Pages.Booking = (function () {
         const serviceId = $selectService.val();
         const providerId = $selectProvider.val();
 
-        $displayBookingSelection.text(`${lang('service')} │ ${lang('provider')}`); // Notice: "│" is a custom ASCII char
+        // Tagline is static in the header; do not overwrite with "Service | Provider".
 
         const serviceOptionText = serviceId ? $selectService.find('option:selected').text() : lang('service');
         const providerOptionText = providerId ? $selectProvider.find('option:selected').text() : lang('provider');
 
         if (serviceId || providerId) {
-            $displayBookingSelection.text(`${serviceOptionText} │ ${providerOptionText}`);
+            // Tagline intentionally left as the static header text.
         }
 
         if (!$availableHours.find('.selected-hour').text()) {
@@ -760,7 +760,6 @@ App.Pages.Booking = (function () {
             }
         });
         if (validIds.length > 1) {
-            totalDuration += 15; // cleanup buffer after stacked booking
         }
 
         // Build the list of all selected services (for the confirmation display).
@@ -1012,9 +1011,32 @@ App.Pages.Booking = (function () {
         const $select = $('<select class="form-select additional-service-select">');
         $select.append(new Option(lang('please_select'), ''));
 
-        vars('available_services').forEach((service) => {
-            $select.append(new Option(service.name, service.id));
-        });
+        // Group services by category, matching the main service dropdown.
+        const services = vars('available_services');
+        const hasCategory = services.some((s) => s.service_category_id);
+
+        if (hasCategory) {
+            const grouped = {};
+            services.forEach((service) => {
+                const key = service.service_category_name || 'Uncategorized';
+                if (!grouped[key]) {
+                    grouped[key] = [];
+                }
+                grouped[key].push(service);
+            });
+
+            Object.keys(grouped).forEach((category) => {
+                const $optgroup = $('<optgroup label="' + category + '"></optgroup>');
+                grouped[category].forEach((service) => {
+                    $optgroup.append(new Option(service.name, service.id));
+                });
+                $select.append($optgroup);
+            });
+        } else {
+            services.forEach((service) => {
+                $select.append(new Option(service.name, service.id));
+            });
+        }
 
         const $removeBtn = $('<button type="button" class="btn btn-link text-danger p-0 ms-2 align-middle" title="Remove">');
         $removeBtn.html('<i class="fas fa-times-circle"></i>');
@@ -1077,9 +1099,6 @@ App.Pages.Booking = (function () {
         });
 
         // Add the gap between stacked services (default 15 min).
-        if (validIds.length > 1) {
-            totalDuration += 15 * (validIds.length - 1);
-        }
 
         $('#booking-total-duration').text(totalDuration + ' min');
         $('#booking-total-price').text('£' + totalPrice.toFixed(2));
@@ -1129,7 +1148,6 @@ App.Pages.Booking = (function () {
                     totalPrice += Number(s.price) || 0;
                 }
             });
-            totalDuration += 15; // cleanup buffer after stacked booking
             additionalInfoParts.push(`${lang('duration')}: ${totalDuration} ${lang('minutes')}`);
             additionalInfoParts.push(`${lang('price')}: ${totalPrice.toFixed(2)} ${service.currency}`);
         } else {

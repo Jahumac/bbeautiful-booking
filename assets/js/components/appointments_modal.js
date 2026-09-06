@@ -71,6 +71,12 @@ App.Components.AppointmentsModal = (function () {
     }
 
     /**
+     * Render the additional (stacked) services into the editor.
+     *
+     * @param {Array} services - Array of service objects (all linked services).
+     * @param {number} primaryId - The primary service ID.
+     */
+    /**
      * Add the component event listeners.
      */
     function addEventListeners() {

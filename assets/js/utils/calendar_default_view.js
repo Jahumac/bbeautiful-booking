@@ -940,6 +940,7 @@ App.Utils.CalendarDefaultView = (function () {
                         color: appointment.color,
                         data: appointment,
                         display: 'block',
+                        serviceIndex: index,
                     });
 
                     cursor = end;

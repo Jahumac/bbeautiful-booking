@@ -56,6 +56,7 @@ class Booking extends EA_Controller
         'id_users_customer',
         'id_services',
         'service_ids',
+        'booking_group',
     ];
 
     /**
@@ -544,35 +545,91 @@ class Booking extends EA_Controller
             $appointment_status_options_json = setting('appointment_status_options', '[]');
             $appointment_status_options = json_decode($appointment_status_options_json, true) ?? [];
             $appointment['status'] = $appointment_status_options[0] ?? null;
-            // Multi-service (stacked) booking: collect all service IDs.
-            // The primary service is id_services; any additional services are in service_ids.
+            // Stacked booking: the customer booked one or more services in a single
+            // booking. Store each service as its OWN separate appointment record,
+            // placed back-to-back with the others (same person, same booking). Each
+            // record keeps its real service (so the edit modal shows the right one)
+            // and is independently editable using the native flow. A shared
+            // booking_group value links the records together.
             $service_ids = $appointment['service_ids'] ?? [];
 
             if (empty($service_ids) && !empty($appointment['id_services'])) {
                 $service_ids = [$appointment['id_services']];
             }
 
+            $service_ids = array_values(array_filter(array_map('intval', $service_ids)));
+
+            $booking_group = null;
+
             if (count($service_ids) > 1) {
-                $appointment['id_services'] = (int) $service_ids[0];
+                $booking_group = uniqid('bg-', true);
             }
 
-            $appointment['service_ids'] = $service_ids;
+            $primary_start = new DateTime($appointment['start_datetime']);
 
-            $appointment['end_datetime'] = $this->appointments_model->calculate_end_datetime($appointment);
+            $appointment_ids = [];
+            $saved = null;
 
-            // service_ids is only used for the duration calculation above; it is not a
-            // real column on the appointments table, so remove it before saving.
+            foreach ($service_ids as $index => $service_id) {
+                $service_record = $this->services_model->find($service_id);
+
+                if (!$service_record) {
+                    continue;
+                }
+
+                $single = $appointment;
+                $single['id_services'] = $service_id;
+
+                // Start of this service = end of the previous one (back-to-back).
+                $single['start_datetime'] = $primary_start->format('Y-m-d H:i:s');
+
+                $service_end = (clone $primary_start)
+                    ->add(new DateInterval('PT' . (int) $service_record['duration'] . 'M'));
+
+                // The LAST stacked service inherits its own slot_interval as a cooldown
+                // block after it, so the next customer cannot book too soon (e.g. 15-30
+                // minutes for cleaning / preparation).
+                $is_last = $index === count($service_ids) - 1;
+
+                if ($is_last && !empty($service_record['slot_interval'])) {
+                    $service_end->add(new DateInterval('PT' . (int) $service_record['slot_interval'] . 'M'));
+                }
+
+                $single['end_datetime'] = $service_end->format('Y-m-d H:i:s');
+                $single['color'] = $service_record['color'] ?? $appointment['color'];
+                $single['location'] = !empty($service_record['location'])
+                    ? $service_record['location']
+                    : ($appointment['location'] ?? '');
+
+                if ($booking_group) {
+                    $single['booking_group'] = $booking_group;
+                }
+
+                // service_ids only drives the splitting loop above; it is not a real
+                // column on the appointments table, so remove it before saving.
+                unset($single['service_ids']);
+
+                $this->appointments_model->only($single, $this->allowed_appointment_fields);
+
+                $single_id = $this->appointments_model->save($single);
+                $appointment_ids[] = $single_id;
+
+                // The next service starts right after this one ends (back-to-back).
+                $primary_start = new DateTime($single['end_datetime']);
+
+                // The last fetched record is used for the success response / notifications.
+                $saved = $this->appointments_model->find($single_id);
+            }
+
+            // If multiple services were saved, use the LAST one for the response (it ends last).
+            if ($saved) {
+                $appointment = $saved;
+            }
+
+            // Remove the temporary service_ids key so it is never persisted.
             unset($appointment['service_ids']);
 
-            $this->appointments_model->only($appointment, $this->allowed_appointment_fields);
-
-            $appointment_id = $this->appointments_model->save($appointment);
-            $appointment = $this->appointments_model->find($appointment_id);
-
-            // Save the multi-service links (if more than one service was selected).
-            if (count($service_ids) > 1) {
-                $this->appointments_model->save_services($appointment_id, $service_ids);
-            }
+            $appointment_id = $appointment['id'];
 
             $company_color = setting('company_color');
 

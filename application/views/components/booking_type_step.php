@@ -8,13 +8,13 @@
 
 <div id="wizard-frame-1" class="wizard-frame p-3 p-md-4" style="visibility: hidden;">
     <div class="frame-container py-3" style="min-height: 500px;">
-        <h2 class="frame-title fw-light text-center mb-4 text-muted mt-md-5"><?= lang('service_and_provider') ?></h2>
+        <h2 class="frame-title fw-light text-center mb-4 text-muted mt-md-5">Book your beauty treatment</h2>
 
         <div class="row frame-content">
             <div class="col col-lg-8 offset-md-2">
                 <div class="mb-3">
                     <label for="select-service" class="fs-5 mb-2">
-                        <strong><?= lang('service') ?></strong>
+                        <strong><?= lang('service') ?></strong> <span class="text-muted fw-normal small">— what would you like to book?</span>
                     </label>
 
                     <select id="select-service" class="form-select mb-4">
