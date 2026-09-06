@@ -1,166 +1,105 @@
 <h1 align="center">
     <br>
-    <a href="https://easyappointments.org">
-        <img src="https://raw.githubusercontent.com/alextselegidis/easyappointments/develop/logo.png" alt="Easy!Appointments" width="150">
-    </a>
-    <br>
-    Easy!Appointments
+    Bbeautiful — Booking System
     <br>
 </h1>
 
 <h4 align="center">
-    A powerful, self-hosted appointment scheduling platform built for flexibility.
+    A customised, self-hosted booking platform for <strong>Bbeautiful Beauty &amp; Nails</strong>.
 </h4>
 
 <p align="center">
-  <img alt="License" src="https://img.shields.io/github/license/alextselegidis/easyappointments?style=for-the-badge">
-  <img alt="Latest Release" src="https://img.shields.io/github/v/release/alextselegidis/easyappointments?style=for-the-badge">
-  <img alt="Downloads" src="https://img.shields.io/github/downloads/alextselegidis/easyappointments/total?style=for-the-badge">
-  <a href="https://discord.com/invite/UeeSkaw">
-    <img alt="Discord" src="https://img.shields.io/badge/chat-on%20discord-7289da?style=for-the-badge&logo=discord&logoColor=white">
-  </a>
-</p>
-
-<p align="center">
-  <a href="#why-easyappointments">Why Easy!Appointments</a> •
-  <a href="#features">Features</a> •
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#license">License</a>
+  Built on <a href="https://easyappointments.org">Easy!Appointments</a> (GPL-3.0) and
+  customised to fit the needs of a single-salon beauty business.
 </p>
 
 ---
 
-<p align="center">
-  <strong>Looking for advanced capabilities?</strong><br>
-  Explore premium features and professional services at
-  <a href="https://easyappointments.org/premium" target="_blank">easyappointments.org/premium</a>.
-</p>
+## What this is
+
+This repository is a **customised fork of Easy!Appointments**, developed and maintained
+for the **Bbeautiful** salon so it can accept online bookings. It is not the stock
+Easy!Appointments — it adds features and a brand layer tailored to a single
+beautician who offers hair, waxing, massage, lash/brow, and nail treatments.
+
+It is **self-hosted**: all appointment and customer data stays under the salon's control
+on the owner's own server. No third party sees or sells the data.
 
 ---
 
-![screenshot](screenshot.png)
+## Customisations (what we changed)
 
-## 🚀 Why Easy!Appointments
+### Multi-service "stacked" booking
 
-**Easy!Appointments** is an open-source scheduling system that gives you full control over your booking workflow.
+The headline feature. A customer can book **more than one treatment in a single booking**
+with no rebooking and no repeated form-filling:
 
-It is designed to adapt to your business — whether you need simple appointment booking or more advanced scheduling logic.
+- The customer picks a first treatment, then clicks **"Add another treatment"** to stack
+  more (e.g. *Back Wax + Eyebrow Tint + Express Gels*).
+- Each stacked treatment is stored as **its own separate appointment record**, placed
+  **back-to-back** with the others (same person, same booking) so the provider sees a
+  clear timeline of what is happening in that visit.
+- Because each treatment is its own record, **each one can be edited or removed
+  independently** from the calendar using the app's normal edit flow (e.g. "I changed my
+  mind on the third one").
+- A shared **`booking_group`** value links the separate records together so they can still
+  be managed as one customer booking.
 
-**Key advantages:**
+### Clean-up / cooldown block
 
-- Fully self-hosted — your data stays under your control
-- Highly customizable and flexible
-- Integrates with your existing website and database
-- Free for both personal and commercial use
+After a **stacked** booking, the **last** treatment inherits its own **slot interval**
+(e.g. 15–30 minutes) as a cooldown block, so no other customer can book during the time
+the beautician needs to clean and reset. This cooldown is **calendar-only** — it does not
+inflate the time or price shown to the customer when they book.
 
----
+### Branding
 
-## ✨ Features
+The whole customer-facing and admin experience is branded for **Bbeautiful**:
 
-Built to support a wide range of scheduling needs:
+- Round **Bbeautiful** logo embedded across the booking page, login, logout, admin header,
+  and browser tab (replacing the stock Easy!Appointments branding).
+- Company name **Bbeautiful** and colour applied app-wide.
+- Friendly copy:
+  - Banner tagline: **"Beauty, nails &amp; more"**
+  - Booking heading: **"Book your beauty treatment"**
+  - Service label: **"Service — what would you like to book?"**
+- Clean footers: **&copy; Bbeautiful** (years), no stock "Powered by Easy!Appointments"
+  sponsor clutter on customer pages.
 
-- Appointment and customer management
-- Service and provider organization
-- Working plans and booking rules
-- Google Calendar synchronization
-- Email notification system
-- Multi-language interface
-- Self-hosted deployment
-- Active open-source community
+### Booking experience
 
----
-
-## ⚡ Quick Start (Development)
-
-Clone and run the project locally using the provided Docker Compose environment:
-
-```bash
-# Clone the repository
-git clone https://github.com/alextselegidis/easyappointments.git
-
-# Navigate into the project
-cd easyappointments
-
-# Start the Docker environment
-docker compose up
-````
-
-Then open a second terminal and enter the application container:
-
-```bash id="app-shell"
-docker compose exec app bash
-```
-
-Inside the container, install dependencies:
-
-```bash id="deps"
-npm install && composer install
-```
-
-Start the development watcher:
-
-```bash id="dev"
-npm start
-```
-
-Build production assets:
-
-```bash id="build"
-npm run build
-```
-
-> Note: Works on Windows (WSL recommended), macOS, and Linux using Docker Compose.
+- **Receipt-style breakdown** — as the customer stacks treatments, they see each service
+  with its own duration and price, then a clean total (time + cost).
+- **Categories in every dropdown** — the "Add another treatment" dropdown groups services
+  by category (Waxing, Massage, Lashes/Brows, Nails) just like the main dropdown.
 
 ---
 
-## 🏗️ Installation (Production)
+## Tech stack
 
-### Requirements
-
-* Apache or Nginx
-* PHP 8.2+
-* MySQL database
-
-### Steps
-
-1. Create a database (or use an existing one)
-2. Upload the `easyappointments` folder to your server
-3. Ensure the `storage` directory is writable
-4. Rename `config-sample.php` to `config.php`
-5. Update configuration values
-6. Open the application in your browser and follow the setup wizard
-
-Once completed, the system is ready to use.
+- **PHP 8** (CodeIgniter) — application framework (as in Easy!Appointments)
+- **MySQL 8** — data storage
+- **Docker / Docker Compose** — deployment on the owner's server (Unraid)
+- Served behind a reverse proxy
 
 ---
 
-## 📚 Resources
+## Deployment
 
-* Website: [https://easyappointments.org](https://easyappointments.org)
-* Issues: [https://github.com/alextselegidis/easyappointments/issues](https://github.com/alextselegidis/easyappointments/issues)
-* Support Group: [https://groups.google.com/forum/#!forum/easy-appointments](https://groups.google.com/forum/#!forum/easy-appointments)
-* Discord: [https://discord.com/invite/UeeSkaw](https://discord.com/invite/UeeSkaw)
+The app runs in Docker. The deployment on the owner's server uses the standard
+Easy!Appointments Docker image with this repo's `application/`, `assets/`, and `config.php`
+mounted over the image so the customisations take effect.
 
----
-
-## 📜 License
-
-* Code: GPL v3.0
-* Content: CC BY 3.0
+> The `application/migrations/` folder adds the schema changes (e.g. the `booking_group`
+> column) on top of Easy!Appointments' own migrations.
 
 ---
 
-## 👤 Author
+## License
 
-* Website: [https://alextselegidis.com](https://alextselegidis.com)
-* GitHub: [https://github.com/alextselegidis](https://github.com/alextselegidis)
-* Twitter: [https://twitter.com/AlexTselegidis](https://twitter.com/AlexTselegidis)
+This project is a modified version of **Easy!Appointments**, which is licensed under the
+**GPL-3.0** license. Those terms continue to apply to this fork. See the
+[Easy!Appointments repository](https://github.com/alextselegidis/easyappointments) for
+the original source and license.
 
----
-
-## 🔥 More Projects
-
-* [Plainpad · Self-Hosted Note Taking](https://github.com/alextselegidis/plainpad)
-* [Clientverse · CRM Application](https://github.com/alextselegidis/clientverse)
-* [Timecrack · Time Tracking](https://github.com/alextselegidis/timecrack)
+This fork is maintained for **Bbeautiful** and is self-hosted and self-controlled.
