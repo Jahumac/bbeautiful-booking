@@ -75,6 +75,7 @@ class Booking extends EA_Controller
         $this->load->model('customers_model');
         $this->load->model('settings_model');
         $this->load->model('consents_model');
+        $this->load->model('invoices_model');
 
         $this->load->library('timezones');
         $this->load->library('synchronization');
@@ -655,6 +656,38 @@ class Booking extends EA_Controller
             );
 
             $this->webhooks_client->trigger(WEBHOOK_APPOINTMENT_SAVE, $appointment);
+
+            // Auto-create an invoice for this booking (HMRC evidence). Uses the
+            // saved appointment record which carries the booking_group so stacked
+            // services are aggregated into one invoice with per-service line items.
+            try {
+                $services_cache = [];
+                foreach ($this->services_model->get() as $service) {
+                    $services_cache[(int) $service['id']] = $service;
+                }
+
+                $built = $this->invoices_model->build_line_items($appointment, $services_cache);
+
+                if (!empty($built['line_items'])) {
+                    $customer_id_for_invoice = (int) ($appointment['id_users_customer'] ?? $customer_id);
+
+                    $invoice = [
+                        'number' => $this->invoices_model->next_number((int) date('Y')),
+                        'id_appointments' => (int) $appointment['id'],
+                        'id_users_customer' => $customer_id_for_invoice,
+                        'invoice_date' => date('Y-m-d H:i:s'),
+                        'total' => $built['total'],
+                        'status' => 'unpaid',
+                        'notes' => null,
+                    ];
+
+                    $invoice_id = $this->invoices_model->save($invoice);
+                    $this->invoices_model->save_line_items($invoice_id, $built['line_items']);
+                }
+            } catch (Throwable $e) {
+                // Invoicing must never block the booking itself.
+                log_message('error', 'Auto-invoice creation failed: ' . $e->getMessage());
+            }
 
             $response = [
                 'appointment_id' => $appointment['id'],

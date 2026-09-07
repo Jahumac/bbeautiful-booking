@@ -31,3 +31,7 @@
 /vendor/
 /metafile
 .DS_Store
+
+# Local deployment configs (contain secrets)
+/live_config.php
+/config.php

@@ -76,17 +76,22 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
         .totals .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
         .totals .grand { border-top: 2px solid #e5e7eb; margin-top: 6px; padding-top: 10px; font-weight: 600; font-size: 16px; }
         .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px; text-align: center; }
-        .print-btn { position: fixed; top: 16px; right: 16px; padding: 10px 18px; background: #111827; color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; }
+        .doc-actions { position: fixed; top: 16px; right: 16px; display: flex; gap: 8px; z-index: 100; }
         @media print {
             body { background: #fff; padding: 0; }
             .invoice { box-shadow: none; border-radius: 0; padding: 0; }
-            .print-btn { display: none; }
+            .doc-actions { display: none; }
         }
     </style>
 </head>
 <body>
     <?php if (empty($is_pdf)): ?>
-        <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+        <div class="doc-actions">
+            <a class="btn btn-primary" href="<?= e(site_url('invoices/pdf?id=' . (int) $invoice['id'])) ?>">
+                <i class="fas fa-file-pdf me-1"></i>Download PDF
+            </a>
+            <button class="btn btn-outline-secondary" onclick="window.print()">Print</button>
+        </div>
     <?php endif; ?>
 
     <div class="invoice">
