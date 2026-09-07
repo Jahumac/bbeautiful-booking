@@ -10,6 +10,7 @@
  * @var float $total
  * @var float $vat_rate
  * @var float $vat_amount
+ * @var float $net_total
  * @var float $grand_total
  * @var string $company_name
  * @var string $company_email
@@ -161,11 +162,14 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
         <div class="totals">
             <table>
                 <tbody>
-                    <tr><td>Subtotal</td><td class="amt">£<?= number_format($total, 2) ?></td></tr>
                     <?php if ((float) $vat_amount > 0): ?>
+                        <tr><td>Subtotal (excl. VAT)</td><td class="amt">£<?= number_format((float) $net_total, 2) ?></td></tr>
                         <tr><td>VAT (<?= rtrim(rtrim(number_format((float) $vat_rate, 2), '0'), '.') ?>%)</td><td class="amt">£<?= number_format((float) $vat_amount, 2) ?></td></tr>
+                        <tr class="total-row"><td>Total (incl. VAT)</td><td class="amt">£<?= number_format((float) $grand_total, 2) ?></td></tr>
+                    <?php else: ?>
+                        <tr><td>Subtotal</td><td class="amt">£<?= number_format((float) $total, 2) ?></td></tr>
+                        <tr class="total-row"><td>Total</td><td class="amt">£<?= number_format((float) $grand_total, 2) ?></td></tr>
                     <?php endif; ?>
-                    <tr class="total-row"><td>Total</td><td class="amt">£<?= number_format((float) $grand_total, 2) ?></td></tr>
                 </tbody>
             </table>
         </div>

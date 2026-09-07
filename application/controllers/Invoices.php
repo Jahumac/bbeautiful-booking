@@ -296,11 +296,24 @@ class Invoices extends EA_Controller
 
         $total = $this->invoices_model->total_from_line_items($line_items);
 
-        // VAT: read the configured rate (0% unless the salon is registered).
-        // When 0%, no VAT lines appear and the total is the sum of prices.
+        // VAT: inclusive model. Her service prices ARE the final price the
+        // customer pays, so VAT is already inside the total, not added on top.
+        // When 0% (not registered) no VAT is shown and total = prices.
+        // When rate > 0, we *split* the price into net + VAT:
+        //   vat_amount = gross * rate / (100 + rate)
+        //   net_total  = gross - vat_amount
+        //   grand_total = gross (unchanged — the customer-facing price)
         $vat_rate = (float) (setting('vat_rate') ?? 0);
-        $vat_amount = round($total * $vat_rate / 100, 2);
-        $grand_total = $vat_amount > 0 ? round($total + $vat_amount, 2) : $total;
+
+        if ($vat_rate > 0) {
+            $vat_amount = round($total * $vat_rate / (100 + $vat_rate), 2);
+            $net_total = round($total - $vat_amount, 2);
+            $grand_total = $total;
+        } else {
+            $vat_amount = 0.0;
+            $net_total = $total;
+            $grand_total = $total;
+        }
 
         return [
             'invoice' => $invoice,
@@ -310,6 +323,7 @@ class Invoices extends EA_Controller
             'total' => $total,
             'vat_rate' => $vat_rate,
             'vat_amount' => $vat_amount,
+            'net_total' => $net_total,
             'grand_total' => $grand_total,
             'company_name' => setting('company_name'),
             'company_email' => setting('company_email'),
