@@ -687,6 +687,8 @@ class Booking extends EA_Controller
             // Auto-create an invoice for this booking (HMRC evidence). Uses the
             // saved appointment record which carries the booking_group so stacked
             // services are aggregated into one invoice with per-service line items.
+            // If an invoice already exists for this appointment (e.g. an update or
+            // reschedule), UPDATE it instead of creating a duplicate.
             try {
                 $services_cache = [];
                 foreach ($this->services_model->get() as $service) {
@@ -698,18 +700,39 @@ class Booking extends EA_Controller
                 if (!empty($built['line_items'])) {
                     $customer_id_for_invoice = (int) ($appointment['id_users_customer'] ?? $customer_id);
 
-                    $invoice = [
-                        'number' => $this->invoices_model->next_number((int) date('Y')),
-                        'id_appointments' => (int) $appointment['id'],
-                        'id_users_customer' => $customer_id_for_invoice,
-                        'invoice_date' => date('Y-m-d H:i:s'),
-                        'total' => $built['total'],
-                        'status' => 'unpaid',
-                        'notes' => null,
-                    ];
+                    $existing_invoice = $this->invoices_model->find_by_appointment((int) $appointment['id']);
 
-                    $invoice_id = $this->invoices_model->save($invoice);
-                    $this->invoices_model->save_line_items($invoice_id, $built['line_items']);
+                    if ($existing_invoice !== null) {
+                        // Update the existing invoice: refresh total + line items,
+                        // but keep the original number and paid status.
+                        $invoice_id = $existing_invoice['id'];
+
+                        $this->invoices_model->save([
+                            'id' => $invoice_id,
+                            'number' => $existing_invoice['number'],
+                            'id_appointments' => (int) $appointment['id'],
+                            'id_users_customer' => $customer_id_for_invoice,
+                            'invoice_date' => $existing_invoice['invoice_date'],
+                            'total' => $built['total'],
+                            'status' => $existing_invoice['status'] ?? 'unpaid',
+                            'notes' => $existing_invoice['notes'] ?? null,
+                        ]);
+
+                        $this->invoices_model->save_line_items($invoice_id, $built['line_items']);
+                    } else {
+                        $invoice = [
+                            'number' => $this->invoices_model->next_number((int) date('Y')),
+                            'id_appointments' => (int) $appointment['id'],
+                            'id_users_customer' => $customer_id_for_invoice,
+                            'invoice_date' => date('Y-m-d H:i:s'),
+                            'total' => $built['total'],
+                            'status' => 'unpaid',
+                            'notes' => null,
+                        ];
+
+                        $invoice_id = $this->invoices_model->save($invoice);
+                        $this->invoices_model->save_line_items($invoice_id, $built['line_items']);
+                    }
                 }
             } catch (Throwable $e) {
                 // Invoicing must never block the booking itself.

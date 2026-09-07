@@ -245,6 +245,26 @@ class Invoices_model extends EA_Model
     }
 
     /**
+     * Find an existing invoice for an appointment, if any.
+     *
+     * @param int $appointment_id
+     *
+     * @return array|null
+     */
+    public function find_by_appointment(int $appointment_id): ?array
+    {
+        $invoice = $this->db->get_where('invoices', ['id_appointments' => $appointment_id])->row_array();
+
+        if (!$invoice) {
+            return null;
+        }
+
+        $this->cast($invoice);
+
+        return $invoice;
+    }
+
+    /**
      * Generate the next sequential invoice number for the given year.
      *
      * Format: INV-YYYY-NNN (e.g. INV-2026-001).
