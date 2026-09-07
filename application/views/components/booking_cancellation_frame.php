@@ -16,7 +16,9 @@
             <div class="col-lg-9">
                 <small>
                     <i class="fas fa-info-circle me-1"></i>
-                    <?= lang('cancel_appointment_locked_hint') ?>
+                    <?= e(strtr(lang('cancel_appointment_locked_hint'), [
+                        '{salon_phone}' => setting('company_phone') ?: '07596072354',
+                    ])) ?>
                 </small>
             </div>
         </div>
