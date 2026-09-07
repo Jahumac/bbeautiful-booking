@@ -75,10 +75,10 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
         td.num, th.num { text-align: right; }
         .totals { margin-left: auto; width: 260px; }
         .totals table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
-        .totals td { font-size: 14px; padding: 6px 0; border: none; }
-        .totals .amt { text-align: right; font-weight: 500; }
-        .totals .total-row td { border-top: 2px solid #e5e7eb; padding-top: 10px; font-weight: 600; font-size: 16px; }
-        .totals .total-row .amt { font-weight: 700; }
+        .totals td { font-size: 14px; padding: 6px 0; border: none; background: none; }
+        .totals .amt { text-align: right; font-weight: normal; }
+        .totals .total-row td { border-top: 2px solid #e5e7eb; padding-top: 8px; font-weight: bold; font-size: 15px; }
+        .totals .total-row .amt { font-weight: bold; }
         .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; text-align: center; }
         .footer .thanks { color: #374151; font-size: 14px; margin-bottom: 4px; }
         .footer .records { font-size: 12px; }
