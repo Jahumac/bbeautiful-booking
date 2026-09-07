@@ -53,6 +53,9 @@ App.Pages.Invoices = (function () {
                 '    <button class="btn btn-sm btn-outline-secondary invoice-pdf" data-id="' + invoice.id + '" title="Download PDF">' +
                 '      <i class="fas fa-file-pdf me-1"></i>Download PDF' +
                 '    </button> ' +
+                '    <button class="btn btn-sm btn-outline-primary invoice-email" data-id="' + invoice.id + '" title="Email invoice to customer">' +
+                '      <i class="fas fa-envelope me-1"></i>Email' +
+                '    </button> ' +
                 '    <button class="btn btn-sm btn-outline-primary invoice-toggle" data-id="' + invoice.id + '" data-status="' + status + '" title="Toggle paid">' +
                 '      <i class="fas fa-check me-1"></i>' + (status === 'paid' ? 'Unmark' : 'Mark paid') +
                 '    </button> ' +
@@ -210,6 +213,30 @@ App.Pages.Invoices = (function () {
             const id = $(this).data('id');
             // Open the pdf endpoint directly so the browser downloads the file.
             window.location.href = App.Utils.Url.siteUrl('invoices/pdf?id=' + id);
+        });
+
+        // Email the invoice PDF to the customer.
+        $('#invoices-table-body').on('click', '.invoice-email', function () {
+            const id = $(this).data('id');
+            const $btn = $(this);
+            const original = $btn.html();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span>Sending');
+
+            $.ajax({
+                url: App.Utils.Url.siteUrl('invoices/email'),
+                method: 'POST',
+                data: { id: id, csrf_token: vars('csrf_token') },
+                dataType: 'json',
+            })
+                .done((response) => {
+                    showMessage(response && response.message ? response.message : 'Invoice emailed.', response && response.success ? 'success' : 'error');
+                })
+                .fail(() => {
+                    showMessage('Could not email the invoice.', 'error');
+                })
+                .always(() => {
+                    $btn.prop('disabled', false).html(original);
+                });
         });
 
         // Toggle paid / unpaid.

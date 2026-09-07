@@ -492,6 +492,142 @@ class Invoices extends EA_Controller
     }
 
     /**
+     * Email an invoice (as a PDF attachment) to the customer.
+     *
+     * POST. Body: id
+     */
+    public function email(): void
+    {
+        try {
+            method('post');
+
+            if (cannot('view', PRIV_APPOINTMENTS)) {
+                abort(403, 'Forbidden');
+            }
+
+            check('id', 'numeric');
+
+            $invoice_id = (int) request('id');
+
+            $data = $this->prepare_invoice_data($invoice_id);
+            $data['is_pdf'] = true; // hide the on-page print button in the template
+
+            $customer_email = trim((string) ($data['customer']['email'] ?? ''));
+
+            // Never email internal walk-in placeholders.
+            if ($customer_email === '' || str_contains($customer_email, '@bbeautiful.local') || str_starts_with($customer_email, 'walkin-')) {
+                json_response([
+                    'success' => false,
+                    'message' => 'No customer email is available for this invoice.',
+                ]);
+                return;
+            }
+
+            // Render the invoice HTML -> PDF via dompdf.
+            $dompdf_lib = FCPATH . 'application/libraries/dompdf/autoload.inc.php';
+
+            if (!file_exists($dompdf_lib)) {
+                throw new RuntimeException('PDF library is not installed.');
+            }
+
+            require_once $dompdf_lib;
+
+            $html = $this->load->view('pages/invoice_document', $data, true);
+
+            $dompdf = new Dompdf\Dompdf();
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            $filename = 'invoice-' . $data['invoice']['number'] . '.pdf';
+            $pdf_content = $dompdf->output();
+
+            $company_name = setting('company_name');
+
+            $subject = 'Your invoice ' . $data['invoice']['number'] . ' from ' . $company_name;
+
+            $html_body = '
+                <div style="font-family: sans-serif; line-height: 1.5; color: #1f2937;">
+                    <p>Hi ' . e($data['customer']['first_name'] ?? 'there') . ',</p>
+                    <p>Please find attached your invoice <strong>' . e($data['invoice']['number']) . '</strong>
+                    from ' . e($company_name) . '.</p>
+                    <p>Thank you for visiting — we hope you enjoyed your treatment!</p>
+                    <p>Bbeautiful</p>
+                </div>
+            ';
+
+            $php_mailer = $this->build_php_mailer_for_invoice(
+                $customer_email,
+                $subject,
+                $html_body,
+                $pdf_content,
+                $filename,
+            );
+
+            $php_mailer->send();
+
+            json_response([
+                'success' => true,
+                'message' => 'Invoice emailed to ' . $customer_email,
+            ]);
+        } catch (Throwable $e) {
+            json_exception($e);
+        }
+    }
+
+    /**
+     * Build a PHPMailer instance to send an invoice PDF email.
+     *
+     * @param string $recipient_email
+     * @param string $subject
+     * @param string $html
+     * @param string $pdf_content
+     * @param string $filename
+     *
+     * @return object
+     */
+    private function build_php_mailer_for_invoice(
+        string $recipient_email,
+        string $subject,
+        string $html,
+        string $pdf_content,
+        string $filename,
+    ) {
+        // PHPMailer is Composer-autoloaded (vendor/autoload.php), so the class
+        // is already available to the controller.
+        $php_mailer = new PHPMailer\PHPMailer\PHPMailer(true);
+
+        $php_mailer->CharSet = 'UTF-8';
+
+        if (config('protocol') === 'smtp') {
+            $php_mailer->isSMTP();
+            $php_mailer->Host = config('smtp_host');
+            $php_mailer->SMTPAuth = config('smtp_auth');
+            $php_mailer->Username = config('smtp_user');
+            $php_mailer->Password = config('smtp_pass');
+            $php_mailer->SMTPSecure = config('smtp_crypto');
+            $php_mailer->Port = config('smtp_port');
+        }
+
+        $from_name = config('from_name') ?: setting('company_name');
+        $from_address = config('from_address') ?: setting('company_email');
+        $reply_to_address = config('reply_to') ?: setting('company_email');
+
+        $php_mailer->setFrom($from_address, $from_name);
+        $php_mailer->addReplyTo($reply_to_address);
+        $php_mailer->addAddress($recipient_email);
+        $php_mailer->Subject = $subject;
+        $php_mailer->isHTML();
+        $php_mailer->Body = $html;
+        $php_mailer->AltBody = strip_tags($html);
+
+        // Attach the invoice PDF.
+        $php_mailer->addStringAttachment($pdf_content, $filename, PHPMailer\PHPMailer\PHPMailer::ENCODING_BASE64, 'application/pdf');
+
+        return $php_mailer;
+    }
+
+    /**
      * Delete an invoice.
      *
      * POST. Body: id
