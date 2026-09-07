@@ -60,6 +60,9 @@ class Notifications
         array $customer,
         array $settings,
         bool $manage_mode = false,
+        array $appointment_group = [],
+        array $appointment_group_names = [],
+        string $appointment_real_end = '',
     ): void {
         try {
             $current_language = config('language');
@@ -93,6 +96,9 @@ class Notifications
                         $customer['email'],
                         $ics_stream,
                         $customer['timezone'],
+                        $appointment_group,
+                        $appointment_group_names,
+                        $appointment_real_end,
                     );
                 } catch (Throwable $e) {
                     $this->log_exception($e, 'appointment-saved to customer', $appointment['id'] ?? null);
@@ -124,6 +130,9 @@ class Notifications
                         $provider['email'],
                         $ics_stream,
                         $provider['timezone'],
+                        $appointment_group,
+                        $appointment_group_names,
+                        $appointment_real_end,
                     );
                 } catch (Throwable $e) {
                     $this->log_exception($e, 'appointment-saved to provider', $appointment['id'] ?? null);
@@ -156,6 +165,9 @@ class Notifications
                         $admin['email'],
                         $ics_stream,
                         $admin['timezone'],
+                        $appointment_group,
+                        $appointment_group_names,
+                        $appointment_real_end,
                     );
                 } catch (Throwable $e) {
                     $this->log_exception($e, 'appointment-saved to admin', $appointment['id'] ?? null);
@@ -192,6 +204,9 @@ class Notifications
                         $secretary['email'],
                         $ics_stream,
                         $secretary['timezone'],
+                        $appointment_group,
+                        $appointment_group_names,
+                        $appointment_real_end,
                     );
                 } catch (Throwable $e) {
                     $this->log_exception($e, 'appointment-saved to secretary', $appointment['id'] ?? null);

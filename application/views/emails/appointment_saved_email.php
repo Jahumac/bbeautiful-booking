@@ -426,7 +426,18 @@ $customer_address = trim((string) ($customer['address'] ?? ''));
                                                     <?= lang('service') ?>
                                                 </td>
                                                 <td style="padding: 3px;">
-                                                    <?= e($service['name']) ?>
+                                                    <?php
+                                                    // Stacked booking: show EVERY service in the group, not just the last.
+                                                    // group_service_names is pre-computed by the caller (worker) where the
+                                                    // services model is loaded.
+                                                    $group_service_names = $appointment_group_names ?? [];
+
+                                                    if (count($group_service_names) > 1) {
+                                                        echo e(implode(' + ', $group_service_names));
+                                                    } else {
+                                                        echo e($service['name']);
+                                                    }
+                                                    ?>
                                                 </td>
                                             </tr>
                                             <tr>
@@ -450,8 +461,15 @@ $customer_address = trim((string) ($customer['address'] ?? ''));
                                                     <?= lang('end') ?>
                                                 </td>
                                                 <td style="padding: 3px;">
-                                                    <?= format_date_time($appointment['end_datetime']) ?>
+                                                    <?php
+                                                    // The stored end_datetime of the LAST stacked service includes its
+                                                    // slot_interval cooldown (a calendar-only buffer). For the customer
+                                                    // email, show the REAL end time (the cooldown is not part of the
+                                                    // appointment the customer booked). Pre-computed by the caller.
+                                                    $real_end = $appointment_real_end ?? $appointment['end_datetime'];
 
+                                                    echo format_date_time($real_end);
+                                                    ?>
                                                 </td>
                                             </tr>
                                             <tr>

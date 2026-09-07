@@ -79,6 +79,9 @@ class Email_messages
         string $recipient_email,
         string $ics_stream,
         ?string $timezone = null,
+        array $appointment_group = [],
+        array $appointment_group_names = [],
+        string $appointment_real_end = '',
     ): void {
         $appointment_timezone = new DateTimeZone($provider['timezone']);
 
@@ -108,6 +111,9 @@ class Email_messages
                 'settings' => $settings,
                 'timezone' => $timezone,
                 'appointment_link' => $appointment_link,
+                'appointment_group' => $appointment_group,
+                'appointment_group_names' => $appointment_group_names,
+                'appointment_real_end' => $appointment_real_end,
             ],
             true,
         );
