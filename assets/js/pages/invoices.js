@@ -84,7 +84,130 @@ App.Pages.Invoices = (function () {
             });
     }
 
+    function addItemRow(description, quantity, duration, price) {
+        const $row = $(
+            '<div class="row g-2 mb-2 invoice-item-row">' +
+            '  <div class="col-12 col-md-5">' +
+            '    <input type="text" class="form-control item-description" placeholder="Description" value="' + (description || '') + '">' +
+            '  </div>' +
+            '  <div class="col-4 col-md-2">' +
+            '    <input type="number" class="form-control item-quantity" placeholder="Qty" min="1" value="' + (quantity || 1) + '">' +
+            '  </div>' +
+            '  <div class="col-4 col-md-2">' +
+            '    <input type="number" class="form-control item-duration" placeholder="Min" min="0" value="' + (duration || '') + '">' +
+            '  </div>' +
+            '  <div class="col-4 col-md-2">' +
+            '    <input type="number" step="0.01" class="form-control item-price" placeholder="£" min="0" value="' + (price || '') + '">' +
+            '  </div>' +
+            '  <div class="col-12 col-md-1 d-flex align-items-center">' +
+            '    <button type="button" class="btn btn-link text-danger p-0 ms-auto remove-item" title="Remove"><i class="fas fa-times-circle"></i></button>' +
+            '  </div>' +
+            '</div>'
+        );
+        $row.find('.remove-item').on('click', () => $row.remove());
+        $('#invoice-items').append($row);
+    }
+
+    function resetManualInvoiceModal() {
+        $('#invoice-customer-name').val('');
+        $('#invoice-customer-email').val('');
+        $('#invoice-customer-phone').val('');
+        $('#invoice-items').empty();
+        addItemRow();
+        $('#manual-invoice-message').hide();
+    }
+
+    function showManualMessage(text, type) {
+        $('#manual-invoice-message')
+            .text(text)
+            .removeClass('alert-success alert-danger d-none')
+            .addClass(type === 'error' ? 'alert-danger' : 'alert-success')
+            .show();
+    }
+
+    function collectManualInvoice() {
+        const items = [];
+
+        $('#invoice-items .invoice-item-row').each(function () {
+            const $row = $(this);
+            const description = $row.find('.item-description').val().trim();
+            const quantity = $row.find('.item-quantity').val();
+            const duration = $row.find('.item-duration').val();
+            const price = $row.find('.item-price').val();
+
+            if (!description) return;
+
+            items.push({
+                description: description,
+                quantity: quantity ? parseInt(quantity, 10) : 1,
+                duration: duration ? parseInt(duration, 10) : null,
+                price: price ? parseFloat(price) : 0,
+            });
+        });
+
+        return items;
+    }
+
+    function saveManualInvoice() {
+        const customerName = $('#invoice-customer-name').val().trim();
+        const customerEmail = $('#invoice-customer-email').val().trim();
+        const customerPhone = $('#invoice-customer-phone').val().trim();
+        const items = collectManualInvoice();
+
+        if (!customerName) {
+            showManualMessage('Please enter the customer name.', 'error');
+            return;
+        }
+
+        if (!items.length) {
+            showManualMessage('Please add at least one line item with a description.', 'error');
+            return;
+        }
+
+        $.ajax({
+            url: App.Utils.Url.siteUrl('invoices/store_manual'),
+            method: 'POST',
+            data: {
+                customer_name: customerName,
+                customer_email: customerEmail,
+                customer_phone: customerPhone,
+                items: JSON.stringify(items),
+                csrf_token: vars('csrf_token'),
+            },
+            dataType: 'json',
+        })
+            .done((response) => {
+                if (response && response.success) {
+                    $('#manual-invoice-modal').modal('hide');
+                    loadInvoices();
+                    window.open(
+                        App.Utils.Url.siteUrl('invoices/view?id=' + response.invoice_id),
+                        '_blank',
+                    );
+                } else {
+                    showManualMessage((response && response.message) ? response.message : 'Could not create the invoice.', 'error');
+                }
+            })
+            .fail(() => {
+                showManualMessage('Could not create the invoice.', 'error');
+            });
+    }
+
     function addEventListeners() {
+        // Open the manual invoice modal.
+        $('#add-invoice').on('click', () => {
+            resetManualInvoiceModal();
+            $('#manual-invoice-modal').modal('show');
+        });
+
+        // Add a line item row.
+        $('#invoice-add-item').on('click', () => {
+            addItemRow();
+        });
+
+        // Save the manual invoice.
+        $('#invoice-save').on('click', saveManualInvoice);
+
         // View / print invoice.
         $('#invoices-table-body').on('click', '.invoice-view', function () {
             const id = $(this).data('id');

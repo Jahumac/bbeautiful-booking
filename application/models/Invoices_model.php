@@ -68,7 +68,7 @@ class Invoices_model extends EA_Model
             }
         }
 
-        if (empty($invoice['number']) || empty($invoice['id_appointments']) || empty($invoice['id_users_customer'])) {
+        if (empty($invoice['number']) || !array_key_exists('id_appointments', $invoice) || empty($invoice['id_users_customer'])) {
             throw new InvalidArgumentException('Not all required invoice fields are provided.');
         }
     }
@@ -173,6 +173,75 @@ class Invoices_model extends EA_Model
     public function delete(int $invoice_id): void
     {
         $this->db->delete('invoices', ['id' => $invoice_id]);
+    }
+
+    /**
+     * Save the line items for an invoice (replacing any existing ones).
+     *
+     * @param int $invoice_id
+     * @param array $line_items Each item: ['description', 'quantity', 'duration', 'price'].
+     */
+    public function save_line_items(int $invoice_id, array $line_items): void
+    {
+        $this->db->delete('invoice_items', ['id_invoices' => $invoice_id]);
+
+        foreach ($line_items as $item) {
+            $this->db->insert('invoice_items', [
+                'id_invoices' => $invoice_id,
+                'description' => (string) ($item['description'] ?? $item['name'] ?? ''),
+                'quantity' => (int) ($item['quantity'] ?? 1),
+                'duration' => !empty($item['duration']) ? (int) $item['duration'] : null,
+                'price' => (float) ($item['price'] ?? 0),
+                'create_datetime' => date('Y-m-d H:i:s'),
+            ]);
+        }
+    }
+
+    /**
+     * Load the stored line items for an invoice.
+     *
+     * @param int $invoice_id
+     *
+     * @return array
+     */
+    public function get_line_items(int $invoice_id): array
+    {
+        $items = $this->db
+            ->order_by('id', 'ASC')
+            ->get_where('invoice_items', ['id_invoices' => $invoice_id])
+            ->result_array();
+
+        $result = [];
+
+        foreach ($items as $item) {
+            $result[] = [
+                'name' => $item['description'],
+                'quantity' => (int) $item['quantity'],
+                'duration' => $item['duration'] !== null ? (int) $item['duration'] : null,
+                'price' => (float) $item['price'],
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Compute the total from stored line items.
+     *
+     * @param array $line_items
+     *
+     * @return float
+     */
+    public function total_from_line_items(array $line_items): float
+    {
+        $total = 0.0;
+
+        foreach ($line_items as $item) {
+            $qty = max(1, (int) ($item['quantity'] ?? 1));
+            $total += (float) ($item['price'] ?? 0) * $qty;
+        }
+
+        return round($total, 2);
     }
 
     /**

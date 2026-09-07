@@ -18,6 +18,13 @@
 $customer_name = trim(($customer['first_name'] ?? '') . ' ' . ($customer['last_name'] ?? ''));
 $customer_email = $customer['email'] ?? '';
 $customer_phone = $customer['phone_number'] ?? '';
+// Hide internal walk-in placeholder values on the printed invoice.
+if (str_contains($customer_email, '@bbeautiful.local') || str_starts_with($customer_email, 'walkin-')) {
+    $customer_email = '';
+}
+if (preg_match('/^0{5,}/', $customer_phone)) {
+    $customer_phone = '';
+}
 $customer_address = $customer['address'] ?? '';
 $customer_city = $customer['city'] ?? '';
 $customer_zip = $customer['zip_code'] ?? '';
@@ -108,7 +115,9 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
             <div class="block">
                 <h3>Invoice details</h3>
                 <p><strong>Date:</strong> <?= e(date($date_format, strtotime($invoice['invoice_date']))) ?></p>
-                <p><strong>Appointment:</strong> <?= e(date($date_format, strtotime($appointment['start_datetime']))) ?></p>
+                <?php if ($appointment): ?>
+                    <p><strong>Appointment:</strong> <?= e(date($date_format, strtotime($appointment['start_datetime']))) ?></p>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -116,6 +125,7 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
             <thead>
                 <tr>
                     <th>Treatment</th>
+                    <th class="num">Qty</th>
                     <th class="num">Duration</th>
                     <th class="num">Price</th>
                 </tr>
@@ -123,9 +133,10 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
             <tbody>
                 <?php foreach ($line_items as $item): ?>
                     <tr>
-                        <td><?= e($item['name']) ?></td>
-                        <td class="num"><?= (int) $item['duration'] ?> min</td>
-                        <td class="num">£<?= number_format((float) $item['price'], 2) ?></td>
+                        <td><?= e($item['name'] ?? $item['description'] ?? '') ?></td>
+                        <td class="num"><?= (int) ($item['quantity'] ?? 1) ?></td>
+                        <td class="num"><?= !empty($item['duration']) ? (int) $item['duration'] . ' min' : '—' ?></td>
+                        <td class="num">£<?= number_format((float) ($item['price'] ?? 0), 2) ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

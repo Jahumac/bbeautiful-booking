@@ -169,6 +169,9 @@ class Invoices extends EA_Controller
 
             $invoice_id = $this->invoices_model->save($invoice);
 
+            // Snapshot the line items for this invoice.
+            $this->invoices_model->save_line_items($invoice_id, $line_items['line_items']);
+
             json_response([
                 'success' => true,
                 'invoice_id' => $invoice_id,
@@ -199,17 +202,37 @@ class Invoices extends EA_Controller
 
             $invoice = $this->invoices_model->find($invoice_id);
 
-            $appointment = $this->appointments_model->find((int) $invoice['id_appointments']);
-            $customer = $this->customers_model->find((int) $invoice['id_users_customer']);
+            $appointment = null;
+            $customer = [];
 
-            // Build line items (recompute from the appointment/group so the
-            // document always reflects the current services).
-            $services_cache = [];
-            foreach ($this->services_model->get() as $service) {
-                $services_cache[(int) $service['id']] = $service;
+            try {
+                $appointment = $this->appointments_model->find((int) $invoice['id_appointments']);
+            } catch (Throwable $e) {
+                $appointment = null;
             }
 
-            $line_items = $this->invoices_model->build_line_items($appointment, $services_cache);
+            try {
+                $customer = $this->customers_model->find((int) $invoice['id_users_customer']);
+            } catch (Throwable $e) {
+                $customer = [];
+            }
+
+            // Load stored line items (works for both appointment-based and manual invoices).
+            $line_items = $this->invoices_model->get_line_items($invoice_id);
+
+            if (empty($line_items) && !empty($appointment)) {
+                // Backwards-compatible fallback: recompute from the appointment.
+                $services_cache = [];
+                foreach ($this->services_model->get() as $service) {
+                    $services_cache[(int) $service['id']] = $service;
+                }
+
+                $computed = $this->invoices_model->build_line_items($appointment, $services_cache);
+                $line_items = $computed['line_items'];
+                $this->invoices_model->save_line_items($invoice_id, $line_items);
+            }
+
+            $total = $this->invoices_model->total_from_line_items($line_items);
 
             $company_name = setting('company_name');
             $company_email = setting('company_email');
@@ -221,8 +244,8 @@ class Invoices extends EA_Controller
                 'invoice' => $invoice,
                 'appointment' => $appointment,
                 'customer' => $customer,
-                'line_items' => $line_items['line_items'],
-                'total' => $line_items['total'],
+                'line_items' => $line_items,
+                'total' => $total,
                 'company_name' => $company_name,
                 'company_email' => $company_email,
                 'company_link' => $company_link,
@@ -232,6 +255,125 @@ class Invoices extends EA_Controller
             ]);
         } catch (Throwable $e) {
             show_error($e->getMessage());
+        }
+    }
+
+    /**
+     * Create a manual invoice (no appointment backing — e.g. walk-in / salon sales).
+     *
+     * POST. Body: customer_name, customer_email?, customer_phone?, items (JSON
+     * array of {description, quantity, duration, price}).
+     */
+    public function store_manual(): void
+    {
+        try {
+            method('post');
+
+            if (cannot('view', PRIV_APPOINTMENTS)) {
+                abort(403, 'Forbidden');
+            }
+
+            $customer_name = (string) request('customer_name');
+            $customer_email = (string) request('customer_email');
+            $customer_phone = (string) request('customer_phone');
+            $items_json = (string) request('items');
+
+            if (empty(trim($customer_name))) {
+                throw new InvalidArgumentException('A customer name is required.');
+            }
+
+            $items = json_decode($items_json, true);
+
+            if (!is_array($items) || empty($items)) {
+                throw new InvalidArgumentException('At least one line item is required.');
+            }
+
+            // Normalise line items.
+            $normalised = [];
+
+            foreach ($items as $item) {
+                $description = trim((string) ($item['description'] ?? ''));
+
+                if ($description === '') {
+                    continue;
+                }
+
+                $normalised[] = [
+                    'description' => $description,
+                    'quantity' => max(1, (int) ($item['quantity'] ?? 1)),
+                    'duration' => !empty($item['duration']) ? (int) $item['duration'] : null,
+                    'price' => round((float) ($item['price'] ?? 0), 2),
+                ];
+            }
+
+            if (empty($normalised)) {
+                throw new InvalidArgumentException('At least one line item with a description is required.');
+            }
+
+            // Find or create a customer by name/email (best-effort).
+            $customer_id = null;
+
+            // The app requires email + phone on customers; generate safe
+            // placeholders when a walk-in manual invoice doesn't supply them.
+            if (empty($customer_email)) {
+                $customer_email = 'walkin-' . uniqid() . '@bbeautiful.local';
+            }
+
+            if (empty($customer_phone)) {
+                $customer_phone = '00000000000';
+            }
+
+            $existing = $this->customers_model->get(['email' => $customer_email]);
+
+            if (!empty($existing)) {
+                $customer_id = (int) $existing[0]['id'];
+            }
+
+            if (!$customer_id) {
+                $name_parts = preg_split('/\s+/', trim($customer_name), 2);
+                $customer_id = $this->customers_model->save([
+                    'first_name' => $name_parts[0] ?? $customer_name,
+                    'last_name' => $name_parts[1] ?? '',
+                    'email' => $customer_email,
+                    'phone_number' => $customer_phone,
+                ]);
+            }
+
+            $total = $this->invoices_model->total_from_line_items($normalised);
+
+            $invoice = [
+                'number' => $this->invoices_model->next_number((int) date('Y')),
+                'id_appointments' => null,
+                'id_users_customer' => $customer_id,
+                'invoice_date' => date('Y-m-d H:i:s'),
+                'total' => $total,
+                'status' => 'unpaid',
+                'notes' => 'Manual invoice',
+            ];
+
+            $invoice_id = $this->invoices_model->save($invoice);
+
+            // Store line items as description/quantity/duration/price.
+            $stored = [];
+
+            foreach ($normalised as $item) {
+                $stored[] = [
+                    'name' => $item['description'],
+                    'quantity' => $item['quantity'],
+                    'duration' => $item['duration'],
+                    'price' => $item['price'],
+                ];
+            }
+
+            $this->invoices_model->save_line_items($invoice_id, $stored);
+
+            json_response([
+                'success' => true,
+                'invoice_id' => $invoice_id,
+                'number' => $invoice['number'],
+            ]);
+        } catch (Throwable $e) {
+            json_exception($e);
         }
     }
 
