@@ -22,9 +22,11 @@ LABEL org.opencontainers.image.source="https://github.com/Jahumac/bbeautiful-boo
 LABEL org.opencontainers.image.licenses="GPL-3.0"
 LABEL org.opencontainers.image.version="$VERSION"
 
-# Unraid dashboard metadata — round Bbeautiful logo as the container icon.
-LABEL net.unraid.docker.managed="com.docker.ubuilder"
+# Unraid dashboard metadata — round Bbeautiful logo as the container icon and
+# register as a Compose Manager "Compose Stack" so it is editable from the UI.
+LABEL net.unraid.docker.managed="composeman"
 LABEL net.unraid.docker.icon="http://10.1.1.4:8086/assets/img/logo.png"
+LABEL net.unraid.docker.webui="http://10.1.1.4:8086"
 LABEL net.unraid.docker.template=""
 
 # The upstream entrypoint regenerates config.php from env vars at boot (BASE_URL
