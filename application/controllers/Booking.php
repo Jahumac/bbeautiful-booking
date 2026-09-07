@@ -247,6 +247,17 @@ class Booking extends EA_Controller
             $appointment = $results[0];
             $provider = $this->providers_model->find($appointment['id_users_provider']);
 
+            // Stacked booking: load the WHOLE group (all services booked together)
+            // so the reschedule page shows every treatment, not just the one whose
+            // hash was in the link. Each record shares the same booking_group.
+            $appointment_group = [];
+
+            if (!empty($appointment['booking_group'])) {
+                $appointment_group = $this->appointments_model->get([
+                    'booking_group' => $appointment['booking_group'],
+                ]);
+            }
+
             // Make sure the appointment can still be rescheduled.
 
             $provider_timezone = new DateTimeZone($provider['timezone']);
@@ -313,6 +324,7 @@ class Booking extends EA_Controller
             $provider = null;
             $customer = null;
             $cancellation_locked = false;
+            $appointment_group = [];
         }
 
         script_vars([
@@ -326,6 +338,7 @@ class Booking extends EA_Controller
             'display_any_provider' => setting('display_any_provider'),
             'future_booking_limit' => setting('future_booking_limit'),
             'appointment_data' => $appointment,
+            'appointment_group' => $appointment_group,
             'provider_data' => $provider ? filter_sensitive_user_data($provider) : null,
             'customer_data' => $customer,
             'customer_token' => $customer_token,
@@ -586,10 +599,42 @@ class Booking extends EA_Controller
                 $booking_group = uniqid('bg-', true);
             }
 
+            // On reschedule of a stacked group, PRESERVE the original booking_group
+            // (don't mint a new one) so the group linkage and invoice aggregation
+            // stay stable across the update.
+            if ($manage_mode && !empty($appointment['id'])) {
+                $primary_record = $this->appointments_model->find((int) $appointment['id']);
+                if (!empty($primary_record['booking_group'])) {
+                    $booking_group = $primary_record['booking_group'];
+                }
+            }
+
             $primary_start = new DateTime($appointment['start_datetime']);
 
             $appointment_ids = [];
             $saved = null;
+
+            // In manage mode (reschedule) the treatments are locked, so map each
+            // service to its EXISTING group record (by id_services) and update
+            // those in place — never insert duplicates or overwrite the wrong one.
+            // The booking_group isn't in the POST, so load it from the DB via the
+            // primary appointment id.
+            $existing_group_by_service = [];
+
+            if ($manage_mode && !empty($appointment['id'])) {
+                $primary_record = $this->appointments_model->find((int) $appointment['id']);
+                $group_value = $primary_record['booking_group'] ?? null;
+
+                if (!empty($group_value)) {
+                    $group_records = $this->appointments_model->get([
+                        'booking_group' => $group_value,
+                    ]);
+
+                    foreach ($group_records as $gr) {
+                        $existing_group_by_service[(int) $gr['id_services']] = (int) $gr['id'];
+                    }
+                }
+            }
 
             foreach ($service_ids as $index => $service_id) {
                 $service_record = $this->services_model->find($service_id);
@@ -600,6 +645,11 @@ class Booking extends EA_Controller
 
                 $single = $appointment;
                 $single['id_services'] = $service_id;
+
+                // Reuse the existing record's id when rescheduling a stacked group.
+                if (isset($existing_group_by_service[(int) $service_id])) {
+                    $single['id'] = $existing_group_by_service[(int) $service_id];
+                }
 
                 // Start of this service = end of the previous one (back-to-back).
                 $single['start_datetime'] = $primary_start->format('Y-m-d H:i:s');

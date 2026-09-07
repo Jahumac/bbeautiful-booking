@@ -189,6 +189,12 @@ App.Pages.Booking = (function () {
         if (manageMode) {
             applyAppointmentData(vars('appointment_data'), vars('provider_data'), vars('customer_data'));
 
+            // In manage mode (reschedule) the booked treatments are LOCKED: the
+            // customer can only change the date/time, not the services. Render the
+            // full stacked group (all services) as read-only rows and disable the
+            // service/provider selectors.
+            renderLockedAppointmentGroup();
+
             $('#wizard-frame-1')
                 .css({
                     'visibility': 'visible',
@@ -864,14 +870,23 @@ App.Pages.Booking = (function () {
         };
 
         // Collect all selected services (primary + any additional stacked treatments).
-        const serviceIds = [$selectService.val()];
-
-        $('.additional-service-select').each(function () {
-            const val = $(this).val();
-            if (val) {
-                serviceIds.push(val);
-            }
-        });
+        // In manage mode the treatments are locked, so use the booked group's
+        // service IDs (the selects are disabled/read-only and can't be trusted).
+        let serviceIds;
+        if (manageMode) {
+            const group = vars('appointment_group') || [];
+            const primary = vars('appointment_data') || {};
+            const all = group.length ? group : [primary];
+            serviceIds = all.map((a) => a.id_services).filter((id) => id);
+        } else {
+            serviceIds = [$selectService.val()];
+            $('.additional-service-select').each(function () {
+                const val = $(this).val();
+                if (val) {
+                    serviceIds.push(val);
+                }
+            });
+        }
 
         data.appointment = {
             start_datetime:
@@ -1053,6 +1068,42 @@ App.Pages.Booking = (function () {
 
         $row.append($label).append($select).append($removeBtn);
         $container.append($row);
+    }
+
+    /**
+     * In manage mode (reschedule), render the full stacked booking group as
+     * read-only rows and lock the service/provider selectors so the customer can
+     * only change the date/time — not the treatments they booked.
+     */
+    function renderLockedAppointmentGroup() {
+        const group = vars('appointment_group') || [];
+        const primary = vars('appointment_data') || {};
+
+        // If there's no group, just lock the single appointment's service.
+        const services = group.length ? group : [primary];
+
+        const $container = $('#additional-services-container');
+        $container.empty();
+
+        // Lock the primary service + provider selectors.
+        $selectService.prop('disabled', true);
+        $selectProvider.prop('disabled', true);
+        $('#add-another-treatment').hide();
+
+        // Render each booked treatment as a read-only row.
+        services.forEach((appt, index) => {
+            const service = vars('available_services').find(
+                (s) => Number(s.id) === Number(appt.id_services),
+            );
+            const name = service ? service.name : 'Treatment';
+
+            const $row = $('<div class="mb-2 additional-service-row">');
+            const $label = $('<label class="fs-6 mb-1 text-muted d-block">Treatment</label>');
+            const $input = $('<input type="text" class="form-control" readonly>');
+            $input.val(name);
+            $row.append($label).append($input);
+            $container.append($row);
+        });
     }
 
     /**
