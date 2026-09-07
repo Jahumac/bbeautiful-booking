@@ -135,6 +135,24 @@
                                 </div>
 
                                 <div class="mb-3">
+                                    <label class="form-label" for="cancellation-notice-hours">
+                                        <?= lang('cancellation_notice_hours') ?>
+                                    </label>
+
+                                    <div class="input-group">
+                                        <input type="number" min="0" max="720" step="1" id="cancellation-notice-hours" data-field="cancellation_notice_hours"
+                                               class="form-control">
+                                        <span class="input-group-text">h</span>
+                                    </div>
+
+                                    <div class="form-text text-muted">
+                                        <small>
+                                            <?= lang('cancellation_notice_hours_hint') ?>
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
                                     <label class="form-label" for="theme">
                                         <?= lang('theme') ?>
                                     </label>

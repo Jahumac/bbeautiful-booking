@@ -96,7 +96,32 @@ class Booking_cancellation extends EA_Controller
 
             $appointment = $occurrences[0];
 
+            // Server-side enforcement of the late-cancellation lock (default 24h):
+            // block online self-cancellation inside the notice window regardless of
+            // what the UI shows, so it can't be bypassed by direct POST.
+            $notice_hours = max(0, (int) (setting('cancellation_notice_hours') ?? 24));
             $provider = $this->providers_model->find($appointment['id_users_provider']);
+            $provider_timezone = new DateTimeZone($provider['timezone']);
+            $cancellation_cutoff = new DateTime('now', $provider_timezone);
+            $cancellation_cutoff->modify('+' . $notice_hours . ' hours');
+            $appointment_start = new DateTime($appointment['start_datetime'], $provider_timezone);
+
+            if ($appointment_start < $cancellation_cutoff) {
+                html_vars([
+                    'page_title' => lang('appointment_cancelled_title'),
+                    'company_color' => setting('company_color'),
+                    'message_title' => lang('cancel_appointment_locked_title'),
+                    'message_text' => lang('cancel_appointment_locked_hint'),
+                    'message_icon' => base_url('assets/img/error.png'),
+                    'google_analytics_code' => setting('google_analytics_code'),
+                    'matomo_analytics_url' => setting('matomo_analytics_url'),
+                    'matomo_analytics_site_id' => setting('matomo_analytics_site_id'),
+                ]);
+
+                $this->load->view('pages/booking_message');
+
+                return;
+            }
 
             $customer = $this->customers_model->find($appointment['id_users_customer']);
 

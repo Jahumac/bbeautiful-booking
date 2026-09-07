@@ -284,6 +284,24 @@ class Booking extends EA_Controller
             }
             $customer = $this->customers_model->find($appointment['id_users_customer']);
             $this->customers_model->only($customer, $this->allowed_customer_fields);
+
+            // Late-cancellation lock: within the configured notice window (default
+            // 24h) online self-cancellation is blocked and the customer is told to
+            // contact the salon by phone. Prevents last-minute booking-and-ditch.
+            $cancellation_locked = false;
+
+            if (isset($appointment['start_datetime'])) {
+                $notice_hours = max(0, (int) (setting('cancellation_notice_hours') ?? 24));
+                $provider_timezone = new DateTimeZone($provider['timezone']);
+                $cancellation_cutoff = new DateTime('now', $provider_timezone);
+                $cancellation_cutoff->modify('+' . $notice_hours . ' hours');
+                $appointment_start_ts = new DateTime($appointment['start_datetime'], $provider_timezone);
+
+                if ($appointment_start_ts < $cancellation_cutoff) {
+                    $cancellation_locked = true;
+                }
+            }
+
             $customer_token = md5(uniqid(mt_rand(), true));
 
             // Cache the token for 10 minutes.
@@ -294,6 +312,7 @@ class Booking extends EA_Controller
             $appointment = null;
             $provider = null;
             $customer = null;
+            $cancellation_locked = false;
         }
 
         script_vars([
@@ -358,6 +377,7 @@ class Booking extends EA_Controller
             'grouped_timezones' => $grouped_timezones,
             'manage_mode' => $manage_mode,
             'appointment_data' => $appointment,
+            'cancellation_locked' => $cancellation_locked,
             'provider_data' => $provider ? filter_sensitive_user_data($provider) : null,
             'customer_data' => $customer,
         ]);

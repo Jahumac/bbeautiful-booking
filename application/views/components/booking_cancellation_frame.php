@@ -5,27 +5,40 @@
  * @var bool $manage_mode
  * @var array $appointment_data
  * @var bool $display_delete_personal_information
+ * @var bool $cancellation_locked
  */
 ?>
 
+
 <?php if ($manage_mode): ?>
-    <div id="cancel-appointment-frame" class="row booking-header-bar py-2 px-3 m-0 align-items-center bg-warning-subtle">
-        <div class="col-lg-9">
-            <small><?= lang('cancel_appointment_hint') ?></small>
+    <?php if (!empty($cancellation_locked)): ?>
+        <div id="cancel-appointment-frame" class="row booking-header-bar py-2 px-3 m-0 align-items-center bg-warning-subtle">
+            <div class="col-lg-9">
+                <small>
+                    <i class="fas fa-info-circle me-1"></i>
+                    <?= lang('cancel_appointment_locked_hint') ?>
+                </small>
+            </div>
         </div>
-        <div class="col-lg-3 text-end">
-            <form id="cancel-appointment-form" method="post"
-                  action="<?= site_url('booking_cancellation/of/' . $appointment_data['hash']) ?>">
+    <?php else: ?>
+        <div id="cancel-appointment-frame" class="row booking-header-bar py-2 px-3 m-0 align-items-center bg-warning-subtle">
+            <div class="col-lg-9">
+                <small><?= lang('cancel_appointment_hint') ?></small>
+            </div>
+            <div class="col-lg-3 text-end">
+                <form id="cancel-appointment-form" method="post"
+                      action="<?= site_url('booking_cancellation/of/' . $appointment_data['hash']) ?>">
 
-                <input id="hidden-cancellation-reason" name="cancellation_reason" type="hidden">
+                    <input id="hidden-cancellation-reason" name="cancellation_reason" type="hidden">
 
-                <button id="cancel-appointment" class="btn btn-warning btn-sm">
-                    <i class="fas fa-trash me-2"></i>
-                    <?= lang('delete') ?>
-                </button>
-            </form>
+                    <button id="cancel-appointment" class="btn btn-warning btn-sm">
+                        <i class="fas fa-trash me-2"></i>
+                        <?= lang('delete') ?>
+                    </button>
+                </form>
+            </div>
         </div>
-    </div>
+    <?php endif; ?>
     <?php if ($display_delete_personal_information): ?>
         <div class="booking-header-bar row py-2 px-3 m-0 align-items-center bg-danger-subtle">
             <div class="col-lg-9">

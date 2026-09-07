@@ -13,6 +13,7 @@
 <?php component('booking_cancellation_frame', [
     'manage_mode' => vars('manage_mode'),
     'appointment_data' => vars('appointment_data'),
+    'cancellation_locked' => vars('cancellation_locked'),
     'display_delete_personal_information' => vars('display_delete_personal_information'),
 ]); ?>
 
