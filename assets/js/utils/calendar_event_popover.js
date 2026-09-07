@@ -293,6 +293,9 @@ App.Utils.CalendarEventPopover = (function () {
                 ...createPopoverRow('end', formatDateTime(info.event.end)),
                 ...createPopoverRow('timezone', vars('timezones')[provider.timezone]),
                 ...createPopoverRow('status', data.status || '-'),
+                ...(data.book_datetime
+                    ? createPopoverRow('booked_at', formatDateTime(data.book_datetime))
+                    : []),
                 ...createPopoverRow('service', data.service.name),
                 $('<strong/>', {class: 'd-inline-block me-2', text: lang('provider')}),
                 renderMapIcon(provider),
