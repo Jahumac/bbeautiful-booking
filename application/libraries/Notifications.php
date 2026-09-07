@@ -62,6 +62,7 @@ class Notifications
         bool $manage_mode = false,
         array $appointment_group = [],
         array $appointment_group_names = [],
+        string $appointment_real_start = '',
         string $appointment_real_end = '',
     ): void {
         try {
@@ -98,6 +99,7 @@ class Notifications
                         $customer['timezone'],
                         $appointment_group,
                         $appointment_group_names,
+                        $appointment_real_start,
                         $appointment_real_end,
                     );
                 } catch (Throwable $e) {
@@ -132,6 +134,7 @@ class Notifications
                         $provider['timezone'],
                         $appointment_group,
                         $appointment_group_names,
+                        $appointment_real_start,
                         $appointment_real_end,
                     );
                 } catch (Throwable $e) {
@@ -167,6 +170,7 @@ class Notifications
                         $admin['timezone'],
                         $appointment_group,
                         $appointment_group_names,
+                        $appointment_real_start,
                         $appointment_real_end,
                     );
                 } catch (Throwable $e) {
@@ -206,6 +210,7 @@ class Notifications
                         $secretary['timezone'],
                         $appointment_group,
                         $appointment_group_names,
+                        $appointment_real_start,
                         $appointment_real_end,
                     );
                 } catch (Throwable $e) {

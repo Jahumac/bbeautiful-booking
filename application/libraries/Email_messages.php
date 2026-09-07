@@ -81,6 +81,7 @@ class Email_messages
         ?string $timezone = null,
         array $appointment_group = [],
         array $appointment_group_names = [],
+        string $appointment_real_start = '',
         string $appointment_real_end = '',
     ): void {
         $appointment_timezone = new DateTimeZone($provider['timezone']);
@@ -97,6 +98,20 @@ class Email_messages
 
             $appointment_end->setTimezone($custom_timezone);
             $appointment['end_datetime'] = $appointment_end->format('Y-m-d H:i:s');
+
+            // Apply the same timezone conversion to the pre-computed real
+            // start/end times (used by the stacked-booking email).
+            if ($appointment_real_start) {
+                $real_start = new DateTime($appointment_real_start, $appointment_timezone);
+                $real_start->setTimezone($custom_timezone);
+                $appointment_real_start = $real_start->format('Y-m-d H:i:s');
+            }
+
+            if ($appointment_real_end) {
+                $real_end = new DateTime($appointment_real_end, $appointment_timezone);
+                $real_end->setTimezone($custom_timezone);
+                $appointment_real_end = $real_end->format('Y-m-d H:i:s');
+            }
         }
 
         $html = $this->CI->load->view(
@@ -113,6 +128,7 @@ class Email_messages
                 'appointment_link' => $appointment_link,
                 'appointment_group' => $appointment_group,
                 'appointment_group_names' => $appointment_group_names,
+                'appointment_real_start' => $appointment_real_start,
                 'appointment_real_end' => $appointment_real_end,
             ],
             true,

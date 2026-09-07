@@ -112,6 +112,7 @@ class Console extends EA_Controller
                 // service, not just the last one whose id was queued.
                 $appointment_group = [];
                 $appointment_group_names = [];
+                $appointment_real_start = $appointment['start_datetime'];
                 $appointment_real_end = $appointment['end_datetime'];
 
                 if (!empty($appointment['booking_group'])) {
@@ -120,7 +121,10 @@ class Console extends EA_Controller
                     ]);
 
                     // Pre-compute the service names (in booking order) and the real
-                    // end time (excluding the last service's slot_interval cooldown).
+                    // start/end times. The queued appointment is the LAST service in
+                    // the stack, so its start_datetime is NOT the booking's start.
+                    // Real start = first group record's start; real end = last group
+                    // record's end minus its slot_interval cooldown.
                     foreach ($appointment_group as $group_appointment) {
                         $group_service = $this->services_model->find($group_appointment['id_services']);
                         if (!empty($group_service['name'])) {
@@ -128,14 +132,20 @@ class Console extends EA_Controller
                         }
                     }
 
-                    // Real end = last group record's end minus its slot_interval cooldown.
+                    $first_group_appointment = $appointment;
                     $last_group_appointment = $appointment;
 
                     foreach ($appointment_group as $group_appointment) {
+                        if (strtotime($group_appointment['start_datetime']) < strtotime($first_group_appointment['start_datetime'])) {
+                            $first_group_appointment = $group_appointment;
+                        }
+
                         if (strtotime($group_appointment['start_datetime']) >= strtotime($last_group_appointment['start_datetime'])) {
                             $last_group_appointment = $group_appointment;
                         }
                     }
+
+                    $appointment_real_start = $first_group_appointment['start_datetime'];
 
                     $last_service = $this->services_model->find($last_group_appointment['id_services']);
                     $cooldown = !empty($last_service['slot_interval']) ? (int) $last_service['slot_interval'] : 0;
@@ -168,6 +178,7 @@ class Console extends EA_Controller
                     $manage_mode,
                     $appointment_group,
                     $appointment_group_names,
+                    $appointment_real_start,
                     $appointment_real_end,
                 );
 
@@ -241,6 +252,7 @@ class Console extends EA_Controller
             // Stacked booking: load the WHOLE group so the email shows every service.
             $appointment_group = [];
             $appointment_group_names = [];
+            $appointment_real_start = $appointment['start_datetime'];
             $appointment_real_end = $appointment['end_datetime'];
 
             if (!empty($appointment['booking_group'])) {
@@ -255,13 +267,20 @@ class Console extends EA_Controller
                     }
                 }
 
+                $first_group_appointment = $appointment;
                 $last_group_appointment = $appointment;
 
                 foreach ($appointment_group as $group_appointment) {
+                    if (strtotime($group_appointment['start_datetime']) < strtotime($first_group_appointment['start_datetime'])) {
+                        $first_group_appointment = $group_appointment;
+                    }
+
                     if (strtotime($group_appointment['start_datetime']) >= strtotime($last_group_appointment['start_datetime'])) {
                         $last_group_appointment = $group_appointment;
                     }
                 }
+
+                $appointment_real_start = $first_group_appointment['start_datetime'];
 
                 $last_service = $this->services_model->find($last_group_appointment['id_services']);
                 $cooldown = !empty($last_service['slot_interval']) ? (int) $last_service['slot_interval'] : 0;
@@ -294,6 +313,7 @@ class Console extends EA_Controller
                 $manage_mode,
                 $appointment_group,
                 $appointment_group_names,
+                $appointment_real_start,
                 $appointment_real_end,
             );
 

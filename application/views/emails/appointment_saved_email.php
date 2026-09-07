@@ -453,7 +453,12 @@ $customer_address = trim((string) ($customer['address'] ?? ''));
                                                     <?= lang('start') ?>
                                                 </td>
                                                 <td style="padding: 3px;">
-                                                    <?= format_date_time($appointment['start_datetime']) ?>
+                                                    <?php
+                                                    // Real start = FIRST service in the stacked group (the queued
+                                                    // appointment is the LAST service, whose start is later).
+                                                    $real_start = $appointment_real_start ?? $appointment['start_datetime'];
+                                                    echo format_date_time($real_start);
+                                                    ?>
                                                 </td>
                                             </tr>
                                             <tr>
