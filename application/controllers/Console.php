@@ -52,6 +52,115 @@ class Console extends EA_Controller
     }
 
     /**
+     * Process the mail queue (send pending appointment notifications).
+     *
+     * Intended to run from cron every minute. Picks up pending mail_queue rows,
+     * sends the notifications for each, and marks them sent. On transient
+     * failure it retries up to MAX_ATTEMPTS times (with a delay) before giving up.
+     *
+     * Usage:
+     *
+     *   php index.php console mail_worker
+     */
+    public function mail_worker(): void
+    {
+        $max_attempts = (int) config('mail_queue_max_attempts') ?: 3;
+        $retry_minutes = (int) config('mail_queue_retry_minutes') ?: 1;
+
+        $pending = $this->db
+            ->where('status', 'pending')
+            ->limit(20)
+            ->get('mail_queue')
+            ->result_array();
+
+        $sent = 0;
+
+        if (empty($pending)) {
+            response(PHP_EOL . 'No pending mail jobs.' . PHP_EOL);
+            return;
+        }
+
+        foreach ($pending as $job) {
+            // Only retry after the retry delay has elapsed (avoid hammering SMTP).
+            $updated = new DateTime($job['updated_at']);
+            if ($job['attempts'] > 0 && (time() - $updated->getTimestamp()) < $retry_minutes * 60) {
+                continue;
+            }
+
+            try {
+                $appointment_id = (int) $job['appointment_id'];
+
+                $appointment = $this->appointments_model->find($appointment_id);
+
+                if (empty($appointment)) {
+                    // Appointment gone (e.g. cancelled) — nothing left to send.
+                    $this->db->where('id', $job['id']);
+                    $this->db->update('mail_queue', [
+                        'status' => 'sent',
+                        'updated_at' => date('Y-m-d H:i:s'),
+                    ]);
+                    continue;
+                }
+
+                $manage_mode = filter_var($job['manage_mode'], FILTER_VALIDATE_BOOLEAN);
+
+                $provider = $this->providers_model->find($appointment['id_users_provider']);
+                $service = $this->services_model->find($appointment['id_services']);
+                $customer = $this->customers_model->find($appointment['id_users_customer']);
+
+                $company_color = setting('company_color');
+
+                $settings = [
+                    'company_name' => setting('company_name'),
+                    'company_link' => setting('company_link'),
+                    'company_email' => setting('company_email'),
+                    'company_color' =>
+                        !empty($company_color) && $company_color != DEFAULT_COMPANY_COLOR ? $company_color : null,
+                    'date_format' => setting('date_format'),
+                    'time_format' => setting('time_format'),
+                ];
+
+                $this->notifications->notify_appointment_saved(
+                    $appointment,
+                    $service,
+                    $provider,
+                    $customer,
+                    $settings,
+                    $manage_mode,
+                );
+
+                $this->db->where('id', $job['id']);
+                $this->db->update('mail_queue', [
+                    'status' => 'sent',
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+
+                $sent++;
+            } catch (Throwable $e) {
+                $attempts = (int) $job['attempts'] + 1;
+
+                if ($attempts >= $max_attempts) {
+                    $new_status = 'failed';
+                } else {
+                    $new_status = 'pending';
+                }
+
+                $this->db->where('id', $job['id']);
+                $this->db->update('mail_queue', [
+                    'status' => $new_status,
+                    'attempts' => $attempts,
+                    'last_error' => substr($e->getMessage(), 0, 2000),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+
+                log_message('error', 'Mail worker failed for job ' . $job['id'] . ': ' . $e->getMessage());
+            }
+        }
+
+        response(PHP_EOL . 'Mail worker done. Sent ' . $sent . ' of ' . count($pending) . ' jobs.' . PHP_EOL);
+    }
+
+    /**
      * Send the "appointment saved" notifications for a booking asynchronously.
      *
      * Fired as a detached CLI worker from Booking::register() so the web request

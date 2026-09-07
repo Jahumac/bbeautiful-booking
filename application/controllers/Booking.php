@@ -664,24 +664,22 @@ class Booking extends EA_Controller
                 'time_format' => setting('time_format'),
             ];
 
-            // Fire the "appointment saved" notifications asynchronously: spawn a
-            // fully-detached CLI worker (new session via setsid) so the booking
-            // request returns immediately instead of blocking on SMTP sends.
+            // Queue the "appointment saved" notifications to a DB-backed mail queue
+            // instead of spawning a background process. Under Apache mod_php the
+            // detached exec child is reaped when the request finishes, so the
+            // email could silently drop. A DB row + cron worker is bulletproof:
+            // the booking page returns instantly and a cron job sends the mail.
             try {
-                $worker_script = FCPATH . 'index.php';
-                $worker_cmd = escapeshellarg(PHP_BINARY)
-                    . ' ' . escapeshellarg($worker_script)
-                    . ' console notify_appointment_saved'
-                    . ' ' . (int) $appointment['id']
-                    . ' ' . ($manage_mode ? 'true' : 'false')
-                    . ' > /dev/null 2>&1';
-
-                // setsid detaches the process into its own session so it is not
-                // reaped when the Apache request handler exits.
-                @exec('setsid ' . $worker_cmd . ' &');
+                $this->db->insert('mail_queue', [
+                    'appointment_id' => (int) $appointment['id'],
+                    'manage_mode' => $manage_mode ? 1 : 0,
+                    'status' => 'pending',
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
             } catch (Throwable $e) {
                 // Emails must never block the booking itself.
-                log_message('error', 'Could not start async notification worker: ' . $e->getMessage());
+                log_message('error', 'Could not enqueue mail job: ' . $e->getMessage());
             }
 
             $this->webhooks_client->trigger(WEBHOOK_APPOINTMENT_SAVE, $appointment);

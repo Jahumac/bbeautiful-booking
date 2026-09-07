@@ -14,6 +14,18 @@ COPY assets/js/utils/ /var/www/html/assets/js/utils/
 COPY assets/js/components/ /var/www/html/assets/js/components/
 COPY assets/img/logo.png assets/img/logo-16x16.png assets/img/favicon.ico /var/www/html/assets/img/
 
+# Install cron so the mail queue worker can run (mail_worker).
+RUN apt-get update && apt-get install -y --no-install-recommends cron \
+    && rm -rf /var/lib/apt/lists/*
+
+# Wrapper entrypoint: start cron for the mail queue worker, then run upstream.
+# (The worker line is seeded into the root USER crontab at boot — a user crontab
+# is the path that reliably fires in this minimal Debian container; /etc/cron.d
+# was confirmed NOT to be processed.)
+COPY docker-entrypoint.sh /usr/local/bin/bbeautiful-entrypoint.sh
+RUN chmod +x /usr/local/bin/bbeautiful-entrypoint.sh
+ENTRYPOINT ["bbeautiful-entrypoint.sh"]
+
 # Identify the image as yours.
 ARG VERSION=latest
 LABEL org.opencontainers.image.title="Bbeautiful"
