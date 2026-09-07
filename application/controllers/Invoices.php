@@ -296,12 +296,21 @@ class Invoices extends EA_Controller
 
         $total = $this->invoices_model->total_from_line_items($line_items);
 
+        // VAT: read the configured rate (0% unless the salon is registered).
+        // When 0%, no VAT lines appear and the total is the sum of prices.
+        $vat_rate = (float) (setting('vat_rate') ?? 0);
+        $vat_amount = round($total * $vat_rate / 100, 2);
+        $grand_total = $vat_amount > 0 ? round($total + $vat_amount, 2) : $total;
+
         return [
             'invoice' => $invoice,
             'appointment' => $appointment,
             'customer' => $customer,
             'line_items' => $line_items,
             'total' => $total,
+            'vat_rate' => $vat_rate,
+            'vat_amount' => $vat_amount,
+            'grand_total' => $grand_total,
             'company_name' => setting('company_name'),
             'company_email' => setting('company_email'),
             'company_link' => setting('company_link'),

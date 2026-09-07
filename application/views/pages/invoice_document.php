@@ -8,6 +8,9 @@
  * @var array $customer
  * @var array $line_items
  * @var float $total
+ * @var float $vat_rate
+ * @var float $vat_amount
+ * @var float $grand_total
  * @var string $company_name
  * @var string $company_email
  * @var string $company_link
@@ -159,7 +162,10 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
             <table>
                 <tbody>
                     <tr><td>Subtotal</td><td class="amt">£<?= number_format($total, 2) ?></td></tr>
-                    <tr class="total-row"><td>Total</td><td class="amt">£<?= number_format($total, 2) ?></td></tr>
+                    <?php if ((float) $vat_amount > 0): ?>
+                        <tr><td>VAT (<?= rtrim(rtrim(number_format((float) $vat_rate, 2), '0'), '.') ?>%)</td><td class="amt">£<?= number_format((float) $vat_amount, 2) ?></td></tr>
+                    <?php endif; ?>
+                    <tr class="total-row"><td>Total</td><td class="amt">£<?= number_format((float) $grand_total, 2) ?></td></tr>
                 </tbody>
             </table>
         </div>

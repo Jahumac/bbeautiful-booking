@@ -89,6 +89,7 @@ class General_settings extends EA_Controller
         'company_link',
         'company_logo',
         'company_color',
+        'vat_rate',
         'company_working_plan',
         'book_advance_timeout',
         'default_timezone',

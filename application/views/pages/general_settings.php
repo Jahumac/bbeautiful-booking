@@ -117,6 +117,24 @@
                                 </div>
 
                                 <div class="mb-3">
+                                    <label class="form-label" for="vat-rate">
+                                        <?= lang('vat_rate') ?>
+                                    </label>
+
+                                    <div class="input-group">
+                                        <input type="number" min="0" max="100" step="0.01" id="vat-rate" data-field="vat_rate"
+                                               class="form-control">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+
+                                    <div class="form-text text-muted">
+                                        <small>
+                                            <?= lang('vat_rate_hint') ?>
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
                                     <label class="form-label" for="theme">
                                         <?= lang('theme') ?>
                                     </label>
