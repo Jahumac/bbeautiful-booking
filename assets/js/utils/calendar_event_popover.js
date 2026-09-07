@@ -167,6 +167,20 @@ App.Utils.CalendarEventPopover = (function () {
     }
 
     /**
+     * Create the "Generate invoice" button for an appointment popover.
+     *
+     * @param {number} appointmentId
+     * @returns {jQuery} Button element.
+     */
+    function createInvoiceButton(appointmentId) {
+        return $('<button/>', {
+            class: 'btn btn-outline-success btn-sm mt-2 w-100 generate-invoice-btn',
+            'data-appointment-id': appointmentId,
+            html: [$('<i/>', {class: 'fas fa-file-invoice me-2'}), $('<span/>', {text: 'Generate invoice'})],
+        });
+    }
+
+    /**
      * Create a labeled text row for popover content.
      *
      * @param {string} labelKey - Language key for label.
@@ -300,6 +314,7 @@ App.Utils.CalendarEventPopover = (function () {
                 ...createPopoverRow('notes', getEventNotes(info.event)),
                 renderCustomContent(info),
                 $('<hr/>'),
+                createInvoiceButton(data.id),
                 createPopoverButtons(displayEdit, displayDelete),
             ],
         });

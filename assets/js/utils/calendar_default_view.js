@@ -344,6 +344,42 @@ App.Utils.CalendarDefaultView = (function () {
     }
 
     /**
+     * Handle the "Generate invoice" popover button click.
+     *
+     * Creates an invoice for the focused appointment (aggregating any stacked
+     * booking group) and opens it in a new tab.
+     */
+    function onGenerateInvoiceClick() {
+        const data = lastFocusedEventData.extendedProps.data;
+
+        if (isUnavailability(data) || isWorkingPlanException(data)) {
+            return;
+        }
+
+        const appointmentId = data.id;
+
+        $.ajax({
+            url: App.Utils.Url.siteUrl('invoices/generate'),
+            method: 'POST',
+            data: { appointment_id: appointmentId, csrf_token: vars('csrf_token') },
+            dataType: 'json',
+        })
+            .done((response) => {
+                if (response && response.success) {
+                    window.open(
+                        App.Utils.Url.siteUrl('invoices/view?id=' + response.invoice_id),
+                        '_blank',
+                    );
+                } else {
+                    alert((response && response.message) ? response.message : 'Could not generate the invoice.');
+                }
+            })
+            .fail(() => {
+                alert('Could not generate the invoice.');
+            });
+    }
+
+    /**
      * Show appointment deletion confirmation dialog.
      *
      * @param {number} appointmentId - Appointment ID to delete.
@@ -1250,6 +1286,9 @@ App.Utils.CalendarDefaultView = (function () {
 
         // Popover delete button
         $calendarPage.on('click', '.delete-popover', onDeletePopoverClick);
+
+        // Popover generate-invoice button
+        $calendarPage.on('click', '.generate-invoice-btn', onGenerateInvoiceClick);
 
         // Filter change
         $selectFilterItem.on('change', () => {

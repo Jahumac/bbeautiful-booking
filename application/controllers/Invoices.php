@@ -214,6 +214,8 @@ class Invoices extends EA_Controller
             $company_name = setting('company_name');
             $company_email = setting('company_email');
             $company_link = setting('company_link');
+            $company_logo = setting('company_logo');
+            $company_color = setting('company_color');
 
             $this->load->view('pages/invoice_document', [
                 'invoice' => $invoice,
@@ -224,6 +226,8 @@ class Invoices extends EA_Controller
                 'company_name' => $company_name,
                 'company_email' => $company_email,
                 'company_link' => $company_link,
+                'company_logo' => $company_logo,
+                'company_color' => $company_color,
                 'date_format' => setting('date_format'),
             ]);
         } catch (Throwable $e) {
