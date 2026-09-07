@@ -21,7 +21,7 @@
     <div id="header-menu" class="collapse navbar-collapse flex-row-reverse px-2">
         <ul class="navbar-nav">
             <?php $hidden = can('view', PRIV_APPOINTMENTS) ? '' : 'd-none'; ?>
-            <?php $active = $active_menu == PRIV_APPOINTMENTS ? 'active' : ''; ?>
+            <?php $active = $active_menu == PRIV_APPOINTMENTS && uri_string() !== 'reports' ? 'active' : ''; ?>
             <li class="nav-item text-center <?= $active . $hidden ?>" style="min-width: 100px;">
                 <a href="<?= site_url(
                     'calendar' . (vars('calendar_view') === CALENDAR_VIEW_TABLE ? '?view=table' : ''),
@@ -40,6 +40,16 @@
                    data-tippy-content="<?= lang('manage_customers_hint') ?>">
                     <i class="fas fa-user-friends me-2"></i>
                     <?= lang('customers') ?>
+                </a>
+            </li>
+
+            <?php $hidden = can('view', PRIV_APPOINTMENTS) ? '' : 'd-none'; ?>
+            <?php $active = $active_menu == PRIV_APPOINTMENTS && uri_string() === 'reports' ? 'active' : ''; ?>
+            <li class="nav-item text-center <?= $active . $hidden ?>" style="min-width: 100px;">
+                <a href="<?= site_url('reports') ?>" class="nav-link text-white fw-light py-3 px-3"
+                   data-tippy-content="Appointments &amp; revenue report">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Reports
                 </a>
             </li>
 
