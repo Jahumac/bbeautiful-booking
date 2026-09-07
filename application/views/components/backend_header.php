@@ -53,6 +53,16 @@
                 </a>
             </li>
 
+            <?php $hidden = can('view', PRIV_APPOINTMENTS) ? '' : 'd-none'; ?>
+            <?php $active = $active_menu == PRIV_APPOINTMENTS && uri_string() === 'invoices' ? 'active' : ''; ?>
+            <li class="nav-item text-center <?= $active . $hidden ?>" style="min-width: 100px;">
+                <a href="<?= site_url('invoices') ?>" class="nav-link text-white fw-light py-3 px-3"
+                   data-tippy-content="Customer invoices">
+                    <i class="fas fa-file-invoice me-2"></i>
+                    Invoices
+                </a>
+            </li>
+
             <?php $hidden = can('view', PRIV_SERVICES) ? '' : 'd-none'; ?>
             <?php $active = $active_menu == PRIV_SERVICES ? 'active' : ''; ?>
             <li class="nav-item dropdown text-center <?= $active . $hidden ?>" style="min-width: 100px;">
