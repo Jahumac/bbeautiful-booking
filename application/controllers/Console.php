@@ -40,10 +40,80 @@ class Console extends EA_Controller
         $this->load->library('cleanup');
 
         $this->load->model('admins_model');
+        $this->load->model('appointments_model');
         $this->load->model('customers_model');
         $this->load->model('providers_model');
         $this->load->model('services_model');
         $this->load->model('settings_model');
+
+        $this->load->library('notifications');
+        $this->load->library('synchronization');
+        $this->load->library('webhooks_client');
+    }
+
+    /**
+     * Send the "appointment saved" notifications for a booking asynchronously.
+     *
+     * Fired as a detached CLI worker from Booking::register() so the web request
+     * returns immediately (avoids the "frozen" feeling while SMTP runs inline).
+     *
+     * Usage:
+     *
+     *   php index.php console notify_appointment_saved <appointment_id> [manage_mode]
+     *
+     * @param string $appointment_id
+     * @param string $manage_mode
+     */
+    public function notify_appointment_saved(string $appointment_id = '', string $manage_mode = 'false'): void
+    {
+        try {
+            $appointment_id = (int) $appointment_id;
+
+            if (empty($appointment_id)) {
+                response(PHP_EOL . 'Error: an appointment ID is required.' . PHP_EOL);
+                return;
+            }
+
+            $appointment = $this->appointments_model->find($appointment_id);
+
+            if (empty($appointment)) {
+                response(PHP_EOL . 'Error: appointment not found: ' . $appointment_id . PHP_EOL);
+                return;
+            }
+
+            $manage_mode = filter_var($manage_mode, FILTER_VALIDATE_BOOLEAN);
+
+            $provider = $this->providers_model->find($appointment['id_users_provider']);
+            $service = $this->services_model->find($appointment['id_services']);
+            $customer = $this->customers_model->find($appointment['id_users_customer']);
+
+            $company_color = setting('company_color');
+
+            $settings = [
+                'company_name' => setting('company_name'),
+                'company_link' => setting('company_link'),
+                'company_email' => setting('company_email'),
+                'company_color' =>
+                    !empty($company_color) && $company_color != DEFAULT_COMPANY_COLOR ? $company_color : null,
+                'date_format' => setting('date_format'),
+                'time_format' => setting('time_format'),
+            ];
+
+            $this->notifications->notify_appointment_saved(
+                $appointment,
+                $service,
+                $provider,
+                $customer,
+                $settings,
+                $manage_mode,
+            );
+
+            response(PHP_EOL . 'Notifications sent for appointment #' . $appointment_id . PHP_EOL);
+        } catch (Throwable $e) {
+            // Log but never crash the worker.
+            log_message('error', 'Async notify failed for appointment ' . $appointment_id . ': ' . $e->getMessage());
+            response(PHP_EOL . 'Error: ' . $e->getMessage() . PHP_EOL);
+        }
     }
 
     /**
@@ -202,6 +272,7 @@ class Console extends EA_Controller
             '⇾ php index.php console backup',
             '⇾ php index.php console sync',
             '⇾ php index.php console cleanup    (cleans sessions, logs, cache, and customer data)',
+            '⇾ php index.php console notify_appointment_saved <appointment_id> [manage_mode]',
             '',
             '',
         ];

@@ -644,16 +644,25 @@ class Booking extends EA_Controller
                 'time_format' => setting('time_format'),
             ];
 
-            $this->synchronization->sync_appointment_saved($appointment, $service, $provider, $customer, $settings);
+            // Fire the "appointment saved" notifications asynchronously: spawn a
+            // fully-detached CLI worker (new session via setsid) so the booking
+            // request returns immediately instead of blocking on SMTP sends.
+            try {
+                $worker_script = FCPATH . 'index.php';
+                $worker_cmd = escapeshellarg(PHP_BINARY)
+                    . ' ' . escapeshellarg($worker_script)
+                    . ' console notify_appointment_saved'
+                    . ' ' . (int) $appointment['id']
+                    . ' ' . ($manage_mode ? 'true' : 'false')
+                    . ' > /dev/null 2>&1';
 
-            $this->notifications->notify_appointment_saved(
-                $appointment,
-                $service,
-                $provider,
-                $customer,
-                $settings,
-                $manage_mode,
-            );
+                // setsid detaches the process into its own session so it is not
+                // reaped when the Apache request handler exits.
+                @exec('setsid ' . $worker_cmd . ' &');
+            } catch (Throwable $e) {
+                // Emails must never block the booking itself.
+                log_message('error', 'Could not start async notification worker: ' . $e->getMessage());
+            }
 
             $this->webhooks_client->trigger(WEBHOOK_APPOINTMENT_SAVE, $appointment);
 
