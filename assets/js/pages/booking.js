@@ -747,13 +747,23 @@ App.Pages.Booking = (function () {
         const timezoneOptionText = $selectTimezone.find('option:selected').text();
 
         // Compute the stacked total (all selected services + cleanup buffer).
-        const allServiceIds = [$selectService.val()];
-        $('.additional-service-select').each(function () {
-            const val = $(this).val();
-            if (val) {
-                allServiceIds.push(val);
-            }
-        });
+        // In manage mode the treatments are locked, so use the booked group's
+        // service IDs (the selects are disabled/read-only and can't be trusted).
+        let allServiceIds;
+        if (manageMode) {
+            const group = vars('appointment_group') || [];
+            const primary = vars('appointment_data') || {};
+            const all = group.length ? group : [primary];
+            allServiceIds = all.map((a) => a.id_services).filter((id) => id);
+        } else {
+            allServiceIds = [$selectService.val()];
+            $('.additional-service-select').each(function () {
+                const val = $(this).val();
+                if (val) {
+                    allServiceIds.push(val);
+                }
+            });
+        }
         const validIds = allServiceIds.filter((id) => id);
 
         let totalDuration = 0;
@@ -1110,14 +1120,23 @@ App.Pages.Booking = (function () {
      * Update the running total (duration + price) of all selected services.
      */
     function updateBookingTotal() {
-        const serviceIds = [$selectService.val()];
-
-        $('.additional-service-select').each(function () {
-            const val = $(this).val();
-            if (val) {
-                serviceIds.push(val);
-            }
-        });
+        // In manage mode the treatments are locked, so use the booked group's
+        // service IDs (the selects are disabled/read-only and can't be trusted).
+        let serviceIds;
+        if (manageMode) {
+            const group = vars('appointment_group') || [];
+            const primary = vars('appointment_data') || {};
+            const all = group.length ? group : [primary];
+            serviceIds = all.map((a) => a.id_services).filter((id) => id);
+        } else {
+            serviceIds = [$selectService.val()];
+            $('.additional-service-select').each(function () {
+                const val = $(this).val();
+                if (val) {
+                    serviceIds.push(val);
+                }
+            });
+        }
 
         const validIds = serviceIds.filter((id) => id);
 
