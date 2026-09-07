@@ -70,7 +70,9 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
         .status.paid { background: #d1fae5; color: #065f46; }
         .status.unpaid { background: #fee2e2; color: #991b1b; }
         .accent { color: <?= e($accent) ?>; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+        .grid-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+        .grid-table td { vertical-align: top; padding: 0 24px 0 0; }
+        .grid-table td:last-child { padding-right: 0; }
         .block h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; }
         .block p { margin: 2px 0; font-size: 14px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
@@ -120,23 +122,25 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
             </div>
         </div>
 
-        <div class="grid">
-            <div class="block">
-                <h3>Billed to</h3>
-                <p><strong><?= e($customer_name) ?></strong></p>
-                <?php if ($customer_email): ?><p><?= e($customer_email) ?></p><?php endif; ?>
-                <?php if ($customer_phone): ?><p><?= e($customer_phone) ?></p><?php endif; ?>
-                <?php if ($customer_address): ?><p><?= e($customer_address) ?></p><?php endif; ?>
-                <?php if ($customer_city || $customer_zip): ?><p><?= e(trim($customer_city . ' ' . $customer_zip)) ?></p><?php endif; ?>
-            </div>
-            <div class="block">
-                <h3>Invoice details</h3>
-                <p><strong>Date:</strong> <?= e(format_date($invoice['invoice_date'])) ?></p>
-                <?php if ($appointment): ?>
-                    <p><strong>Appointment:</strong> <?= e(format_date($appointment['start_datetime'])) ?></p>
-                <?php endif; ?>
-            </div>
-        </div>
+        <table class="grid-table">
+            <tr>
+                <td class="block">
+                    <h3>Billed to</h3>
+                    <p><strong><?= e($customer_name) ?></strong></p>
+                    <?php if ($customer_email): ?><p><?= e($customer_email) ?></p><?php endif; ?>
+                    <?php if ($customer_phone): ?><p><?= e($customer_phone) ?></p><?php endif; ?>
+                    <?php if ($customer_address): ?><p><?= e($customer_address) ?></p><?php endif; ?>
+                    <?php if ($customer_city || $customer_zip): ?><p><?= e(trim($customer_city . ' ' . $customer_zip)) ?></p><?php endif; ?>
+                </td>
+                <td class="block">
+                    <h3>Invoice details</h3>
+                    <p><strong>Date:</strong> <?= e(format_date($invoice['invoice_date'])) ?></p>
+                    <?php if ($appointment): ?>
+                        <p><strong>Appointment:</strong> <?= e(format_date($appointment['start_datetime'])) ?></p>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        </table>
 
         <table>
             <thead>
