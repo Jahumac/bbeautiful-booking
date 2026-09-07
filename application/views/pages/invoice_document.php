@@ -73,10 +73,12 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
         thead th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border-bottom: 2px solid #e5e7eb; padding: 8px 12px; }
         tbody td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
         td.num, th.num { text-align: right; }
-        .totals { margin-left: auto; width: 260px; max-width: 100%; }
-        .totals .subtotal { display: flex; justify-content: space-between; padding: 6px 2px; font-size: 14px; }
-        .totals .subtotal .amount { font-weight: 500; }
-        .totals .total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; padding: 10px 2px 0; border-top: 2px solid #e5e7eb; font-weight: 600; font-size: 16px; }
+        .totals { margin-left: auto; width: 260px; }
+        .totals table { width: 100%; border-collapse: collapse; margin-bottom: 0; }
+        .totals td { font-size: 14px; padding: 6px 0; border: none; }
+        .totals .amt { text-align: right; font-weight: 500; }
+        .totals .total-row td { border-top: 2px solid #e5e7eb; padding-top: 10px; font-weight: 600; font-size: 16px; }
+        .totals .total-row .amt { font-weight: 700; }
         .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; text-align: center; }
         .footer .thanks { color: #374151; font-size: 14px; margin-bottom: 4px; }
         .footer .records { font-size: 12px; }
@@ -154,8 +156,12 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
         </table>
 
         <div class="totals">
-            <div class="subtotal"><span>Subtotal</span><span class="amount">£<?= number_format($total, 2) ?></span></div>
-            <div class="total"><span>Total</span><span>£<?= number_format($total, 2) ?></span></div>
+            <table>
+                <tbody>
+                    <tr><td>Subtotal</td><td class="amt">£<?= number_format($total, 2) ?></td></tr>
+                    <tr class="total-row"><td>Total</td><td class="amt">£<?= number_format($total, 2) ?></td></tr>
+                </tbody>
+            </table>
         </div>
 
         <div class="footer">
