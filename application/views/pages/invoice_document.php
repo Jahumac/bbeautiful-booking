@@ -56,9 +56,10 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #e5e7eb; padding-bottom: 24px; margin-bottom: 24px; }
+        .brand { text-align: center; flex: 1; }
         .brand h1 { margin: 0; font-size: 24px; font-weight: 600; }
         .brand .tagline { color: #6b7280; font-size: 13px; margin-top: 4px; }
-        .brand .logo { max-height: 56px; margin-bottom: 8px; }
+        .brand .logo { display: block; margin: 0 auto 10px; max-height: 84px; max-width: 180px; }
         .meta { text-align: right; }
         .meta .number { font-size: 20px; font-weight: 600; }
         .meta .status { display: inline-block; margin-top: 8px; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
@@ -72,10 +73,13 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
         thead th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b7280; border-bottom: 2px solid #e5e7eb; padding: 8px 12px; }
         tbody td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
         td.num, th.num { text-align: right; }
-        .totals { margin-left: auto; width: 260px; }
-        .totals .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
-        .totals .grand { border-top: 2px solid #e5e7eb; margin-top: 6px; padding-top: 10px; font-weight: 600; font-size: 16px; }
-        .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px; text-align: center; }
+        .totals { margin-left: auto; width: 260px; max-width: 100%; }
+        .totals .subtotal { display: flex; justify-content: space-between; padding: 6px 2px; font-size: 14px; }
+        .totals .subtotal .amount { font-weight: 500; }
+        .totals .total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 10px; padding: 10px 2px 0; border-top: 2px solid #e5e7eb; font-weight: 600; font-size: 16px; }
+        .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 13px; text-align: center; }
+        .footer .thanks { color: #374151; font-size: 14px; margin-bottom: 4px; }
+        .footer .records { font-size: 12px; }
         .doc-actions { position: fixed; top: 16px; right: 16px; display: flex; gap: 8px; z-index: 100; }
         @media print {
             body { background: #fff; padding: 0; }
@@ -101,7 +105,7 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
                     <img src="<?= e($logo_src) ?>" alt="logo" class="logo">
                 <?php endif; ?>
                 <h1><?= e($company_name) ?></h1>
-                <div class="tagline">Beauty, nails &amp; more</div>
+                <div class="tagline">Your friendly home beauty &amp; nail salon</div>
                 <?php if ($company_email): ?><div class="tagline"><?= e($company_email) ?></div><?php endif; ?>
             </div>
             <div class="meta">
@@ -150,12 +154,13 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
         </table>
 
         <div class="totals">
-            <div class="row"><span>Subtotal</span><span>£<?= number_format($total, 2) ?></span></div>
-            <div class="row grand"><span>Total</span><span>£<?= number_format($total, 2) ?></span></div>
+            <div class="subtotal"><span>Subtotal</span><span class="amount">£<?= number_format($total, 2) ?></span></div>
+            <div class="total"><span>Total</span><span>£<?= number_format($total, 2) ?></span></div>
         </div>
 
         <div class="footer">
-            Thank you for visiting <?= e($company_name) ?>. This invoice was generated for your records.
+            <div class="thanks">Thank you for visiting <?= e($company_name) ?> — we hope you enjoyed your treatment.</div>
+            <div class="records">This invoice was generated for your records.</div>
         </div>
     </div>
 </body>
