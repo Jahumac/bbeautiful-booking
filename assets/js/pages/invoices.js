@@ -100,7 +100,7 @@ App.Pages.Invoices = (function () {
             $.ajax({
                 url: App.Utils.Url.siteUrl('invoices/mark_paid'),
                 method: 'POST',
-                data: { id: id, status: next },
+                data: { id: id, status: next, csrf_token: vars('csrf_token') },
                 dataType: 'json',
             })
                 .done((response) => {
@@ -126,7 +126,7 @@ App.Pages.Invoices = (function () {
             $.ajax({
                 url: App.Utils.Url.siteUrl('invoices/destroy'),
                 method: 'POST',
-                data: { id: id },
+                data: { id: id, csrf_token: vars('csrf_token') },
                 dataType: 'json',
             })
                 .done((response) => {
