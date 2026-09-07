@@ -85,7 +85,9 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
     </style>
 </head>
 <body>
-    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+    <?php if (empty($is_pdf)): ?>
+        <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+    <?php endif; ?>
 
     <div class="invoice">
         <div class="header">
@@ -114,9 +116,9 @@ $logo_src = !empty($company_logo) ? $company_logo : '';
             </div>
             <div class="block">
                 <h3>Invoice details</h3>
-                <p><strong>Date:</strong> <?= e(date($date_format, strtotime($invoice['invoice_date']))) ?></p>
+                <p><strong>Date:</strong> <?= e(format_date($invoice['invoice_date'])) ?></p>
                 <?php if ($appointment): ?>
-                    <p><strong>Appointment:</strong> <?= e(date($date_format, strtotime($appointment['start_datetime']))) ?></p>
+                    <p><strong>Appointment:</strong> <?= e(format_date($appointment['start_datetime'])) ?></p>
                 <?php endif; ?>
             </div>
         </div>

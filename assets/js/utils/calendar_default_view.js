@@ -366,9 +366,8 @@ App.Utils.CalendarDefaultView = (function () {
         })
             .done((response) => {
                 if (response && response.success) {
-                    window.open(
-                        App.Utils.Url.siteUrl('invoices/view?id=' + response.invoice_id),
-                        '_blank',
+                    window.location.href = App.Utils.Url.siteUrl(
+                        'invoices/pdf?id=' + response.invoice_id,
                     );
                 } else {
                     alert((response && response.message) ? response.message : 'Could not generate the invoice.');

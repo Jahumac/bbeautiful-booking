@@ -50,8 +50,8 @@ App.Pages.Invoices = (function () {
                 '  <td class="text-end fw-semibold">' + money(invoice.total) + '</td>' +
                 '  <td><span class="badge ' + (status === 'paid' ? 'text-bg-success' : 'text-bg-danger') + '">' + status + '</span></td>' +
                 '  <td class="text-end">' +
-                '    <button class="btn btn-sm btn-outline-secondary invoice-view" data-id="' + invoice.id + '" title="View / print">' +
-                '      <i class="fas fa-file-invoice me-1"></i>View' +
+                '    <button class="btn btn-sm btn-outline-secondary invoice-pdf" data-id="' + invoice.id + '" title="Download PDF">' +
+                '      <i class="fas fa-file-pdf me-1"></i>Download PDF' +
                 '    </button> ' +
                 '    <button class="btn btn-sm btn-outline-primary invoice-toggle" data-id="' + invoice.id + '" data-status="' + status + '" title="Toggle paid">' +
                 '      <i class="fas fa-check me-1"></i>' + (status === 'paid' ? 'Unmark' : 'Mark paid') +
@@ -180,10 +180,7 @@ App.Pages.Invoices = (function () {
                 if (response && response.success) {
                     $('#manual-invoice-modal').modal('hide');
                     loadInvoices();
-                    window.open(
-                        App.Utils.Url.siteUrl('invoices/view?id=' + response.invoice_id),
-                        '_blank',
-                    );
+                    window.location.href = App.Utils.Url.siteUrl('invoices/pdf?id=' + response.invoice_id);
                 } else {
                     showManualMessage((response && response.message) ? response.message : 'Could not create the invoice.', 'error');
                 }
@@ -208,10 +205,11 @@ App.Pages.Invoices = (function () {
         // Save the manual invoice.
         $('#invoice-save').on('click', saveManualInvoice);
 
-        // View / print invoice.
-        $('#invoices-table-body').on('click', '.invoice-view', function () {
+        // Download invoice PDF.
+        $('#invoices-table-body').on('click', '.invoice-pdf', function () {
             const id = $(this).data('id');
-            window.open(App.Utils.Url.siteUrl('invoices/view?id=' + id), '_blank');
+            // Open the pdf endpoint directly so the browser downloads the file.
+            window.location.href = App.Utils.Url.siteUrl('invoices/pdf?id=' + id);
         });
 
         // Toggle paid / unpaid.

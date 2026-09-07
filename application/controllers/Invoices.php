@@ -200,62 +200,116 @@ class Invoices extends EA_Controller
 
             $invoice_id = (int) request('id');
 
-            $invoice = $this->invoices_model->find($invoice_id);
+            $data = $this->prepare_invoice_data($invoice_id);
 
-            $appointment = null;
-            $customer = [];
-
-            try {
-                $appointment = $this->appointments_model->find((int) $invoice['id_appointments']);
-            } catch (Throwable $e) {
-                $appointment = null;
-            }
-
-            try {
-                $customer = $this->customers_model->find((int) $invoice['id_users_customer']);
-            } catch (Throwable $e) {
-                $customer = [];
-            }
-
-            // Load stored line items (works for both appointment-based and manual invoices).
-            $line_items = $this->invoices_model->get_line_items($invoice_id);
-
-            if (empty($line_items) && !empty($appointment)) {
-                // Backwards-compatible fallback: recompute from the appointment.
-                $services_cache = [];
-                foreach ($this->services_model->get() as $service) {
-                    $services_cache[(int) $service['id']] = $service;
-                }
-
-                $computed = $this->invoices_model->build_line_items($appointment, $services_cache);
-                $line_items = $computed['line_items'];
-                $this->invoices_model->save_line_items($invoice_id, $line_items);
-            }
-
-            $total = $this->invoices_model->total_from_line_items($line_items);
-
-            $company_name = setting('company_name');
-            $company_email = setting('company_email');
-            $company_link = setting('company_link');
-            $company_logo = setting('company_logo');
-            $company_color = setting('company_color');
-
-            $this->load->view('pages/invoice_document', [
-                'invoice' => $invoice,
-                'appointment' => $appointment,
-                'customer' => $customer,
-                'line_items' => $line_items,
-                'total' => $total,
-                'company_name' => $company_name,
-                'company_email' => $company_email,
-                'company_link' => $company_link,
-                'company_logo' => $company_logo,
-                'company_color' => $company_color,
-                'date_format' => setting('date_format'),
-            ]);
+            $this->load->view('pages/invoice_document', $data);
         } catch (Throwable $e) {
             show_error($e->getMessage());
         }
+    }
+
+    /**
+     * Stream a clean PDF download of an invoice via dompdf.
+     *
+     * GET. Query: id
+     */
+    public function pdf(): void
+    {
+        try {
+            method('get');
+
+            if (cannot('view', PRIV_APPOINTMENTS)) {
+                abort(403, 'Forbidden');
+            }
+
+            check('id', 'numeric');
+
+            $invoice_id = (int) request('id');
+
+            $data = $this->prepare_invoice_data($invoice_id);
+            $data['is_pdf'] = true; // hides the on-page print button in the template
+
+            // dompdf library (mounted into the fork's application/libraries/dompdf).
+            $dompdf_lib = FCPATH . 'application/libraries/dompdf/autoload.inc.php';
+
+            if (!file_exists($dompdf_lib)) {
+                throw new RuntimeException('PDF library is not installed.');
+            }
+
+            require_once $dompdf_lib;
+
+            $html = $this->load->view('pages/invoice_document', $data, true);
+
+            $dompdf = new Dompdf\Dompdf();
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            $filename = 'invoice-' . $data['invoice']['number'] . '.pdf';
+
+            $dompdf->stream($filename, ['Attachment' => true]);
+        } catch (Throwable $e) {
+            show_error($e->getMessage());
+        }
+    }
+
+    /**
+     * Gather the shared invoice data for rendering (HTML view or PDF).
+     *
+     * @param int $invoice_id
+     *
+     * @return array
+     */
+    private function prepare_invoice_data(int $invoice_id): array
+    {
+        $invoice = $this->invoices_model->find($invoice_id);
+
+        $appointment = null;
+        $customer = [];
+
+        try {
+            $appointment = $this->appointments_model->find((int) $invoice['id_appointments']);
+        } catch (Throwable $e) {
+            $appointment = null;
+        }
+
+        try {
+            $customer = $this->customers_model->find((int) $invoice['id_users_customer']);
+        } catch (Throwable $e) {
+            $customer = [];
+        }
+
+        // Load stored line items (works for both appointment-based and manual invoices).
+        $line_items = $this->invoices_model->get_line_items($invoice_id);
+
+        if (empty($line_items) && !empty($appointment)) {
+            // Backwards-compatible fallback: recompute from the appointment.
+            $services_cache = [];
+            foreach ($this->services_model->get() as $service) {
+                $services_cache[(int) $service['id']] = $service;
+            }
+
+            $computed = $this->invoices_model->build_line_items($appointment, $services_cache);
+            $line_items = $computed['line_items'];
+            $this->invoices_model->save_line_items($invoice_id, $line_items);
+        }
+
+        $total = $this->invoices_model->total_from_line_items($line_items);
+
+        return [
+            'invoice' => $invoice,
+            'appointment' => $appointment,
+            'customer' => $customer,
+            'line_items' => $line_items,
+            'total' => $total,
+            'company_name' => setting('company_name'),
+            'company_email' => setting('company_email'),
+            'company_link' => setting('company_link'),
+            'company_logo' => setting('company_logo'),
+            'company_color' => setting('company_color'),
+            'date_format' => setting('date_format'),
+            'is_pdf' => false,
+        ];
     }
 
     /**
